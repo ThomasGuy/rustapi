@@ -1,0 +1,45 @@
+[package]
+edition = "2021"
+name = "rustapi"
+version = "0.1.0"
+
+[dependencies]
+# database ORM
+diesel = {version = "2.3.7", features = ["postgres", "r2d2", "chrono", "uuid"]}
+diesel_migrations = {version = "2.3.1", features = ["postgres"]}
+
+# Environment variable management
+dotenvy = "0.15"
+
+# Serialization
+serde = {version = "1.0", features = ["derive"]}
+serde_json = "1.0"
+
+# Common types that work well with Diesel
+chrono = {version = "0.4", features = ["serde"]}
+uuid = {version = "1", features = ["v4", "serde"]}
+
+# Axum
+axum = {version = "0.8"}
+axum-extra = {version = "0.12", features = ["typed-header", "query", "multipart"]}
+tokio = {version = "1.52", features = ["full"]}
+
+# Tower Ecosystem
+tower = {version = "0.5", features = ["full"]}
+tower-http = {version = "0.6", features = ["cors", "compression-gzip", "timeout", "trace", "fs", "limit"]}
+
+# Authentication
+argon2 = "0.5"
+jsonwebtoken = "10.3"
+
+# Error Handling
+anyhow = "1.0"
+thiserror = "2.0"
+
+# Logging & Tracing
+tracing = "0.1"
+tracing-subscriber = {version = "0.3", features = ["env-filter", "json"]}
+
+# Testing
+http-body-util = "0.1"
+tower-service = "0.3"
