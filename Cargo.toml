@@ -5,8 +5,8 @@ version = "0.1.0"
 
 [dependencies]
 # database ORM
-diesel = {version = "2.3.7", features = ["postgres", "r2d2", "chrono", "uuid"]}
-diesel_migrations = {version = "2.3.1", features = ["postgres"]}
+diesel = {version = "2", features = ["postgres", "r2d2", "chrono", "uuid"]}
+diesel_migrations = {version = "2", features = ["postgres"]}
 
 # Environment variable management
 dotenvy = "0.15"
@@ -20,7 +20,7 @@ chrono = {version = "0.4", features = ["serde"]}
 uuid = {version = "1", features = ["v4", "serde"]}
 
 # Axum
-axum = {version = "0.8"}
+axum = {version = "0.8", features = ["macros"]}
 axum-extra = {version = "0.12", features = ["typed-header", "query", "multipart"]}
 tokio = {version = "1.52", features = ["full"]}
 

@@ -4,12 +4,11 @@ use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Queryable, Selectable, Serialize)]
+#[derive(Debug, Clone, Queryable, Selectable, Serialize, Identifiable)]
 #[diesel(table_name = users)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct User {
     pub id: Uuid,
-    pub user_id: i32,
     pub email: String,
     pub username: String,
     #[serde(skip_serializing)] // Never expose password hash in API responses

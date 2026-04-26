@@ -1,12 +1,14 @@
 use std::env;
 
-pub struct Config {
+#[derive(Clone)]
+pub struct AppConfig {
     pub database_url: String,
     pub host: String,
     pub port: u16,
+    pub(crate) secret_key: String,
 }
 
-impl Config {
+impl AppConfig {
     pub fn from_env() -> Self {
         dotenvy::dotenv().ok();
 
@@ -17,6 +19,8 @@ impl Config {
                 .unwrap_or_else(|_| "3000".to_string())
                 .parse()
                 .expect("PORT must be a number"),
+            secret_key: env::var("SECRET_KEY")
+                .unwrap_or_else(|_| "twguy_kjf#hask~dfh^".to_string()),
         }
     }
 }

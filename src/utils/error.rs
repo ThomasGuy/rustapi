@@ -3,9 +3,9 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
-use diesel::r2d2::PoolError;
 use serde::{Deserialize, Serialize};
-use thiserror;
+
+pub type AppResult<T> = Result<T, DbError>;
 
 /// Generic error response
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -27,10 +27,13 @@ pub(crate) enum DbError {
     ConnectionError(#[from] diesel::r2d2::Error),
 
     #[error("Pool timeout or initialization error: {0}")]
-    PoolError(#[from] PoolError),
+    PoolError(#[from] diesel::r2d2::PoolError),
 
     #[error("Generic error: {0}")]
     Generic(String),
+
+    #[error("Internal task error: {0}")]
+    JoinError(#[from] tokio::task::JoinError),
 }
 
 impl IntoResponse for DbError {
@@ -41,22 +44,30 @@ impl IntoResponse for DbError {
                 diesel::result::Error::NotFound => {
                     (StatusCode::NOT_FOUND, "Resource not found.".to_string())
                 }
+                diesel::result::Error::DatabaseError(
+                    diesel::result::DatabaseErrorKind::UniqueViolation,
+                    _,
+                ) => (StatusCode::CONFLICT, "Resource already exists".into()),
                 _ => (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     format!("Database error: {err}"),
                 ),
             },
             DbError::ConnectionError(err) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
+                StatusCode::SERVICE_UNAVAILABLE,
                 format!("Connection manager error: {err}"),
             ),
             DbError::PoolError(err) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
+                StatusCode::SERVICE_UNAVAILABLE,
                 format!("Connection pool error: {err}"),
             ),
             DbError::Generic(msg) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("Internal error: {msg}"),
+            ),
+            DbError::JoinError(err) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Internal task error: {err}"),
             ),
         };
 

@@ -1,19 +1,22 @@
 mod config;
 mod db;
-mod error;
 mod handlers;
 mod models;
 mod routes;
 mod schema;
+mod utils;
+
+use std::sync::{Arc, RwLock};
 
 use axum::{body::Body, http::Request};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
-use uuid::Uuid;
+// use uuid::Uuid;
 
 use db::{get_connection, init_pool, DbConnection, DbPool};
 use routes::create_routes;
+use utils::app_state::{AppState, TokenKeys};
 
 // This macro reads your migrations at compile time
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
@@ -29,26 +32,36 @@ async fn main() -> anyhow::Result<()> {
     // 2. Configure the TraceLayer with a custom span
     let trace_layer = TraceLayer::new_for_http().make_span_with(|request: &Request<Body>| {
         // Generate a unique ID for this specific request
-        let request_id = Uuid::new_v4();
+        // let request_id = Uuid::new_v4();
 
         // Create a span that includes the method, uri, and our custom ID
         tracing::info_span!(
             "http-request",
             method = %request.method(),
             uri = %request.uri(),
-            request_id = %request_id,
+            // request_id = %request_id,
         )
     });
 
-    let config = config::Config::from_env();
-    let pool: DbPool = init_pool(config.database_url)?;
+    let config = config::AppConfig::from_env();
+    let pool: DbPool = init_pool(&config)?;
 
+    // run migrations
     {
-        let mut conn: DbConnection = get_connection(&pool)?;
+        let mut conn: DbConnection = get_connection(&pool).await?;
         run_migrations(&mut conn).map_err(|err| anyhow::anyhow!("Migrations failed: {}", err))?;
     }
+    let token = TokenKeys {
+        token_key: String::from("a_key"),
+    };
 
-    let app = create_routes(pool).layer(trace_layer);
+    let state = AppState {
+        pool: pool.clone(),
+        config: Arc::new(config.clone()),
+        public_keys: Arc::new(RwLock::new(token)),
+    };
+
+    let app = create_routes(state).layer(trace_layer);
 
     // Start server
     let addr = format!("{}:{}", config.host, config.port);
