@@ -2,15 +2,16 @@
 // pub(crate) mod user_routes;
 
 use axum::{
-    // extract::State,
+    extract::DefaultBodyLimit,
     routing::{get, post},
     Router,
 };
+use tower_http::{limit::RequestBodyLimitLayer, services::ServeDir};
 
 use crate::{
-    // db::DbPool,
     handlers::{
         health,
+        posts::{create_posts, upload_image},
         users::{all_users, create_user, get_config},
     },
     utils::app_state::AppState,
@@ -19,8 +20,14 @@ use crate::{
 pub fn create_routes(state: AppState) -> Router {
     Router::new()
         .route("/health", get(health::health_check))
-        .route("/api/user", get(all_users))
-        .route("/api/user", post(create_user))
+        .route("/user", get(all_users))
+        .route("/user", post(create_user))
         .route("/config", get(get_config))
+        .route("/post/image", post(upload_image))
+        .route("/post", post(create_posts))
+        // Disable the default 2MB limit and set a new one (4MB)
+        .layer(DefaultBodyLimit::disable())
+        .layer(RequestBodyLimitLayer::new(4 * 1024 * 1024))
+        .nest_service("/images", ServeDir::new("images"))
         .with_state(state)
 }

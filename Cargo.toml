@@ -20,13 +20,13 @@ chrono = {version = "0.4", features = ["serde"]}
 uuid = {version = "1", features = ["v4", "serde"]}
 
 # Axum
-axum = {version = "0.8", features = ["macros"]}
+axum = {version = "0.8", features = ["macros", "multipart"]}
 axum-extra = {version = "0.12", features = ["typed-header", "query", "multipart"]}
 tokio = {version = "1.52", features = ["full"]}
 
 # Tower Ecosystem
 tower = {version = "0.5", features = ["full"]}
-tower-http = {version = "0.6", features = ["cors", "compression-gzip", "timeout", "trace", "fs", "limit"]}
+tower-http = {version = "0.6", features = ["cors", "timeout", "trace", "fs", "limit"]}
 
 # Authentication
 argon2 = "0.5"

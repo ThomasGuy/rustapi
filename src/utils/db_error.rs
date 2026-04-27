@@ -1,3 +1,4 @@
+use super::app_error::AppError;
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
@@ -5,7 +6,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 
-pub type AppResult<T> = Result<T, DbError>;
+pub type AppResult<T> = Result<T, AppError>;
 
 /// Generic error response
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -34,6 +35,12 @@ pub(crate) enum DbError {
 
     #[error("Internal task error: {0}")]
     JoinError(#[from] tokio::task::JoinError),
+
+    #[error("file upload failed: {0}")]
+    UploadError(#[from] std::io::Error),
+
+    #[error("Multipart malformed: {0}")]
+    MultipartError(#[from] axum::extract::multipart::MultipartError),
 }
 
 impl IntoResponse for DbError {
@@ -68,6 +75,14 @@ impl IntoResponse for DbError {
             DbError::JoinError(err) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("Internal task error: {err}"),
+            ),
+            DbError::UploadError(err) => (
+                StatusCode::BAD_REQUEST,
+                format!("I/O file upload error: {err}"),
+            ),
+            DbError::MultipartError(multipart_error) => (
+                StatusCode::BAD_REQUEST,
+                format!("I/O file upload error: {multipart_error}"),
             ),
         };
 

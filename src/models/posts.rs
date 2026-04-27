@@ -4,21 +4,21 @@ use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::users::User;
+// use super::users::User;
 
-#[derive(Debug, Clone, Queryable, Selectable, Serialize, Identifiable, Associations)]
-#[diesel(belongs_to(User))]
+#[derive(Debug, Clone, Queryable, Selectable, Serialize)]
+// #[diesel(belongs_to(User))]
 #[diesel(table_name = posts)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Post {
     pub id: Uuid,
-    pub user_id: Uuid,
-    pub title: String,
-    pub slug: String,
-    pub content: String,
-    pub excerpt: Option<String>,
-    pub published: bool,
-    pub published_at: Option<NaiveDateTime>,
+    // pub user_id: Uuid,
+    // pub title: String,
+    pub caption: Option<String>,
+    pub image_url: String,
+    pub image_url_type: String,
+    // pub published: bool,
+    // pub published_at: Option<NaiveDateTime>,
     pub view_count: i32,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
@@ -27,24 +27,24 @@ pub struct Post {
 #[derive(Debug, Insertable, Deserialize)]
 #[diesel(table_name = posts)]
 pub struct NewPost {
-    pub user_id: Uuid,
-    pub title: String,
-    pub slug: String,
-    pub content: String,
-    pub excerpt: Option<String>,
-    pub published: Option<bool>,
-    pub published_at: Option<NaiveDateTime>,
+    // pub user_id: Uuid,
+    // pub title: String,
+    pub caption: Option<String>,
+    pub image_url: String,
+    pub image_url_type: String,
+    // pub published: Option<bool>,
+    // pub published_at: Option<NaiveDateTime>,
 }
 
 #[derive(Debug, AsChangeset, Deserialize)]
 #[diesel(table_name = posts)]
 pub struct UpdatePost {
-    pub title: Option<String>,
-    pub slug: Option<String>,
-    pub content: Option<String>,
-    pub excerpt: Option<String>,
-    pub published: Option<bool>,
-    pub published_at: Option<NaiveDateTime>,
+    // pub title: Option<String>,
+    pub caption: Option<String>,
+    pub image_url: Option<String>,
+    pub image_url_type: Option<String>,
+    // pub published: Option<bool>,
+    // pub published_at: Option<NaiveDateTime>,
 }
 
 // For listings with author info

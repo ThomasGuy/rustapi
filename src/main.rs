@@ -12,7 +12,6 @@ use axum::{body::Body, http::Request};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
-// use uuid::Uuid;
 
 use db::{get_connection, init_pool, DbConnection, DbPool};
 use routes::create_routes;
@@ -51,6 +50,7 @@ async fn main() -> anyhow::Result<()> {
         let mut conn: DbConnection = get_connection(&pool).await?;
         run_migrations(&mut conn).map_err(|err| anyhow::anyhow!("Migrations failed: {}", err))?;
     }
+
     let token = TokenKeys {
         token_key: String::from("a_key"),
     };
@@ -62,6 +62,7 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let app = create_routes(state).layer(trace_layer);
+    tokio::fs::create_dir_all("./images").await?;
 
     // Start server
     let addr = format!("{}:{}", config.host, config.port);

@@ -1,14 +1,13 @@
 use std::sync::Arc;
 
 use axum::{extract::State, http::StatusCode, Json};
-
 use diesel::prelude::*;
 
 use crate::config::AppConfig;
 use crate::db::{get_connection, DbConnection, DbPool};
 use crate::models::users::{NewUser, User};
 use crate::schema::users::dsl::*;
-use crate::utils::error::{AppResult, DbError};
+use crate::utils::db_error::{AppResult, DbError};
 
 // POST /api/user
 #[tracing::instrument(skip(pool, payload), fields(user.email = %payload.email))]
@@ -37,7 +36,8 @@ pub async fn all_users(State(pool): State<DbPool>) -> AppResult<Json<Vec<User>>>
             .load::<User>(&mut conn)
             .map_err(DbError::DatabaseError)
     })
-    .await??;
+    .await
+    .map_err(DbError::from)??;
 
     Ok(Json(users_list))
 }

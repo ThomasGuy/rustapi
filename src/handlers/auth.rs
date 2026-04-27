@@ -1,8 +1,17 @@
 use std::sync::{Arc, RwLock};
 
 use axum::extract::State;
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use crate::utils::app_state::TokenKeys;
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Claims {
+    pub sub: Uuid,  // User ID
+    pub exp: usize, // Expiration time
+    pub iat: usize, // Issued at
+}
 
 // HANDLER: Reading keys
 async fn login(State(keys): State<Arc<RwLock<TokenKeys>>>) {

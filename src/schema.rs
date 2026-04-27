@@ -3,15 +3,10 @@
 diesel::table! {
     posts (id) {
         id -> Uuid,
-        user_id -> Uuid,
-        #[max_length = 255]
-        title -> Varchar,
-        #[max_length = 255]
-        slug -> Varchar,
-        content -> Text,
-        excerpt -> Nullable<Text>,
-        published -> Bool,
-        published_at -> Nullable<Timestamp>,
+        caption -> Nullable<Text>,
+        image_url -> Text,
+        #[max_length = 64]
+        image_url_type -> Varchar,
         view_count -> Int4,
         created_at -> Timestamp,
         updated_at -> Timestamp,
@@ -40,7 +35,5 @@ diesel::table! {
         updated_at -> Timestamp,
     }
 }
-
-diesel::joinable!(posts -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(posts, users,);
