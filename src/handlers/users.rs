@@ -6,8 +6,8 @@ use diesel::prelude::*;
 use crate::config::AppConfig;
 use crate::db::{get_connection, DbConnection, DbPool};
 use crate::models::users::{NewUser, User};
-use crate::schema::users::dsl::*;
-use crate::utils::db_error::{AppResult, DbError};
+use crate::schema::users;
+use crate::utils::{app_state::AppResult, db_error::DbError};
 
 // POST /api/user
 #[tracing::instrument(skip(pool, payload), fields(user.email = %payload.email))]
@@ -17,7 +17,7 @@ pub async fn create_user(
 ) -> AppResult<(StatusCode, Json<User>)> {
     let mut conn: DbConnection = get_connection(&pool).await?;
 
-    let user = diesel::insert_into(users)
+    let user = diesel::insert_into(users::table)
         .values(&payload)
         .get_result::<User>(&mut conn)
         .map_err(DbError::from)?;
@@ -32,7 +32,7 @@ pub async fn create_user(
 pub async fn all_users(State(pool): State<DbPool>) -> AppResult<Json<Vec<User>>> {
     let users_list = tokio::task::spawn_blocking(move || -> Result<Vec<User>, DbError> {
         let mut conn: DbConnection = pool.get().map_err(DbError::PoolError)?;
-        users
+        users::table
             .load::<User>(&mut conn)
             .map_err(DbError::DatabaseError)
     })

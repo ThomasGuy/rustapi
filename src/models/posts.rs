@@ -4,15 +4,15 @@ use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-// use super::users::User;
+use super::users::User;
 
-#[derive(Debug, Clone, Queryable, Selectable, Serialize)]
-// #[diesel(belongs_to(User))]
+#[derive(Debug, Queryable, Selectable, Serialize, Identifiable, Associations, PartialEq)]
+#[diesel(belongs_to(User))]
 #[diesel(table_name = posts)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Post {
     pub id: Uuid,
-    // pub user_id: Uuid,
+    pub user_id: Uuid,
     // pub title: String,
     pub caption: Option<String>,
     pub image_url: String,
@@ -27,7 +27,7 @@ pub struct Post {
 #[derive(Debug, Insertable, Deserialize)]
 #[diesel(table_name = posts)]
 pub struct NewPost {
-    // pub user_id: Uuid,
+    pub user_id: Uuid,
     // pub title: String,
     pub caption: Option<String>,
     pub image_url: String,

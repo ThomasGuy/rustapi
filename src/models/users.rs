@@ -4,7 +4,7 @@ use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Queryable, Selectable, Serialize, Identifiable)]
+#[derive(Debug, Queryable, Selectable, Serialize, Identifiable, PartialEq)]
 #[diesel(table_name = users)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct User {

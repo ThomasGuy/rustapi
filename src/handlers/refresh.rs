@@ -1,0 +1,98 @@
+use axum::{extract::State, Json};
+use diesel::prelude::*;
+use hex;
+use jsonwebtoken::{decode, Algorithm, Validation};
+use serde::Deserialize;
+use sha2::{Digest, Sha256}; // Add 'sha2' crate to hash tokens before storing
+use uuid::Uuid;
+
+use crate::auth::claims::Claims;
+use crate::auth::claims::{encode_token, TokenType};
+use crate::db::{get_connection, DbConnection};
+use crate::models::users::User;
+use crate::schema::{refresh_tokens, users};
+
+use crate::utils::db_error::DbError;
+use crate::utils::{
+    app_error::AppError,
+    app_state::{AppJson, AppResult, AppState},
+};
+
+use super::login::AuthResponse;
+
+#[derive(Deserialize)]
+pub struct RefreshRequest {
+    pub refresh_token: String,
+}
+
+pub async fn refresh_handler(
+    State(state): State<AppState>,
+    AppJson(payload): AppJson<RefreshRequest>,
+) -> AppResult<Json<AuthResponse>> {
+    let keys = state.public_keys.read().unwrap();
+    let mut conn: DbConnection = get_connection(&state.pool).await?;
+
+    // 1. Decode and validate the provided refresh token
+    let token_data = decode::<Claims>(
+        &payload.refresh_token,
+        &keys.decoding_key,
+        &Validation::new(Algorithm::HS256),
+    )
+    .map_err(|_| AppError::Auth("Invalid refresh token".into()))?;
+
+    // 2. Hash the incoming token to look it up in DB
+    let hash_bytes = Sha256::digest(payload.refresh_token.as_bytes());
+    let token_hash = hex::encode(hash_bytes);
+
+    // 3. Find and Delete the token (Atomic Rotation)
+    // If delete returns 0 rows, the token was either fake or already used (potential theft!)
+    let deleted_count = diesel::delete(refresh_tokens::table)
+        .filter(refresh_tokens::token_hash.eq(&token_hash))
+        .execute(&mut conn)
+        .map_err(|_| AppError::Internal("Database error".into()))?;
+
+    if deleted_count == 0 {
+        // Detect potential Reuse: If token is valid JWT but not in DB,
+        // someone might be trying to reuse a rotated token.
+        return Err(AppError::Auth(
+            "Token has already been used or revoked".into(),
+        ));
+    }
+
+    // 2. Ensure it actually IS a refresh token
+    if let TokenType::Access = token_data.claims.token_type {
+        return Err(AppError::Auth("Invalid token type".into()));
+    }
+
+    // 3. Parse user_id from sub
+    let user_id = Uuid::parse_str(&token_data.claims.sub)
+        .map_err(|_| AppError::Internal("Invalid user ID in token".into()))?;
+
+    // 4. (Optional) Check DB if user still exists/is active
+    let user = users::table
+        .find(user_id)
+        .first::<User>(&mut conn)
+        .map_err(|_| AppError::Auth("User no longer exists".into()))?;
+
+    // 5. Issue new tokens
+    let new_access = encode_token(user.id, &keys, 15, TokenType::Access)?;
+    let new_refresh_raw = encode_token(user.id, &keys, 10080, TokenType::Refresh)?;
+
+    // 6. Hash and Store the NEW refresh token
+    let hash_bytes = Sha256::digest(new_refresh_raw.as_bytes());
+    let new_hash = hex::encode(hash_bytes);
+    diesel::insert_into(refresh_tokens::table)
+        .values((
+            refresh_tokens::user_id.eq(user.id),
+            refresh_tokens::token_hash.eq(new_hash),
+            refresh_tokens::expires_at.eq(chrono::Utc::now() + chrono::Duration::days(7)),
+        ))
+        .execute(&mut conn)
+        .map_err(DbError::from)?;
+
+    Ok(Json(AuthResponse {
+        access_token: new_access,
+        refresh_token: new_refresh_raw,
+        user,
+    }))
+}

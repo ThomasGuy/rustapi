@@ -1,8 +1,22 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
+    comments (id) {
+        id -> Uuid,
+        post_id -> Uuid,
+        user_id -> Uuid,
+        #[max_length = 255]
+        username -> Varchar,
+        text -> Text,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     posts (id) {
         id -> Uuid,
+        user_id -> Uuid,
         caption -> Nullable<Text>,
         image_url -> Text,
         #[max_length = 64]
@@ -10,6 +24,16 @@ diesel::table! {
         view_count -> Int4,
         created_at -> Timestamp,
         updated_at -> Timestamp,
+    }
+}
+
+diesel::table! {
+    refresh_tokens (id) {
+        id -> Uuid,
+        user_id -> Uuid,
+        token_hash -> Text,
+        expires_at -> Timestamptz,
+        created_at -> Nullable<Timestamptz>,
     }
 }
 
@@ -36,4 +60,9 @@ diesel::table! {
     }
 }
 
-diesel::allow_tables_to_appear_in_same_query!(posts, users,);
+diesel::joinable!(comments -> posts (post_id));
+diesel::joinable!(comments -> users (user_id));
+diesel::joinable!(posts -> users (user_id));
+diesel::joinable!(refresh_tokens -> users (user_id));
+
+diesel::allow_tables_to_appear_in_same_query!(comments, posts, refresh_tokens, users,);

@@ -20,8 +20,10 @@ chrono = {version = "0.4", features = ["serde"]}
 uuid = {version = "1", features = ["v4", "serde"]}
 
 # Axum
+async-trait = "0.1"
 axum = {version = "0.8", features = ["macros", "multipart"]}
 axum-extra = {version = "0.12", features = ["typed-header", "query", "multipart"]}
+axum-macros = "0.5"
 tokio = {version = "1.52", features = ["full"]}
 
 # Tower Ecosystem
@@ -29,8 +31,9 @@ tower = {version = "0.5", features = ["full"]}
 tower-http = {version = "0.6", features = ["cors", "timeout", "trace", "fs", "limit"]}
 
 # Authentication
-argon2 = "0.5"
+bcrypt = "0.19"
 jsonwebtoken = "10.3"
+sha2 = "0.11.0"
 
 # Error Handling
 anyhow = "1.0"
@@ -43,3 +46,4 @@ tracing-subscriber = {version = "0.3", features = ["env-filter", "json"]}
 # Testing
 http-body-util = "0.1"
 tower-service = "0.3"
+hex = "0.4.3"

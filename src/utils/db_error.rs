@@ -1,12 +1,9 @@
-use super::app_error::AppError;
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
     Json,
 };
 use serde::{Deserialize, Serialize};
-
-pub type AppResult<T> = Result<T, AppError>;
 
 /// Generic error response
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -38,9 +35,6 @@ pub(crate) enum DbError {
 
     #[error("file upload failed: {0}")]
     UploadError(#[from] std::io::Error),
-
-    #[error("Multipart malformed: {0}")]
-    MultipartError(#[from] axum::extract::multipart::MultipartError),
 }
 
 impl IntoResponse for DbError {
@@ -79,10 +73,6 @@ impl IntoResponse for DbError {
             DbError::UploadError(err) => (
                 StatusCode::BAD_REQUEST,
                 format!("I/O file upload error: {err}"),
-            ),
-            DbError::MultipartError(multipart_error) => (
-                StatusCode::BAD_REQUEST,
-                format!("I/O file upload error: {multipart_error}"),
             ),
         };
 
