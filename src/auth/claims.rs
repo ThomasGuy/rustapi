@@ -1,4 +1,4 @@
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use axum::{
@@ -8,11 +8,11 @@ use axum::{
 
 use axum_extra::headers::{authorization::Bearer, Authorization};
 use axum_extra::TypedHeader;
-use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, Header, Validation};
+use jsonwebtoken::{decode, encode, Algorithm, Header, Validation};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::utils::app_error::AppError;
+use crate::utils::AppError;
 
 pub(crate) struct TokenKeys {
     pub encoding_key: jsonwebtoken::EncodingKey,
@@ -32,21 +32,17 @@ pub struct Claims {
     pub token_type: TokenType,
 }
 
-impl Claims {
-    pub fn decode(token: &str, secret: &str) -> Result<Self, AppError> {
-        decode::<Self>(
-            token,
-            &DecodingKey::from_secret(secret.as_ref()),
-            &Validation::new(Algorithm::HS256),
-        )
-        .map(|data| data.claims)
-        .map_err(|_| AppError::Auth("Invalid or expired token".into()))
-    }
-}
+// impl Claims {
+//     pub fn decode(token: &str, key: &jsonwebtoken::DecodingKey) -> Result<Self, AppError> {
+//         decode::<Self>(token, key, &jsonwebtoken::Validation::new(Algorithm::HS256))
+//             .map(|data| data.claims)
+//             .map_err(|_| AppError::Auth("Invalid or expired token".into()))
+//     }
+// }
 
 impl<S> FromRequestParts<S> for Claims
 where
-    Arc<RwLock<TokenKeys>>: FromRef<S>,
+    Arc<TokenKeys>: FromRef<S>,
     S: Send + Sync,
 {
     type Rejection = AppError;
@@ -59,21 +55,14 @@ where
                 .map_err(|_| AppError::Auth("Missing Authorization header".into()))?;
 
         // 2. Get the Keys from State
-        let keys_handle = Arc::<RwLock<TokenKeys>>::from_ref(state);
-
-        // 3. Acquire Read Lock
-        // Note: Using a standard RwLock read() is usually fine here as it's fast
-        let keys = keys_handle
-            .read()
-            .map_err(|_| AppError::Internal("Lock poisoned".into()))?;
+        let keys = Arc::<TokenKeys>::from_ref(state);
+        // let mut validation = jsonwebtoken::Validation::default();
+        // validation.validate_exp = true;
 
         // 4. Decode using your keys logic
-        let token_data = decode::<Claims>(
-            bearer.token(),
-            &keys.decoding_key,
-            &Validation::new(Algorithm::HS256),
-        )
-        .map_err(|e| AppError::Auth(format!("JWT Error: {}", e)))?;
+        let token_data =
+            decode::<Claims>(bearer.token(), &keys.decoding_key, &Validation::default())
+                .map_err(|e| AppError::Auth(format!("JWT Error: {}", e)))?;
 
         if let TokenType::Refresh = token_data.claims.token_type {
             return Err(AppError::Auth(

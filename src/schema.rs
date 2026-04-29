@@ -7,7 +7,7 @@ diesel::table! {
         user_id -> Uuid,
         #[max_length = 255]
         username -> Varchar,
-        text -> Text,
+        comment -> Text,
         created_at -> Timestamp,
         updated_at -> Timestamp,
     }
@@ -18,6 +18,8 @@ diesel::table! {
         id -> Uuid,
         user_id -> Uuid,
         caption -> Nullable<Text>,
+        #[max_length = 255]
+        username -> Varchar,
         image_url -> Text,
         #[max_length = 64]
         image_url_type -> Varchar,

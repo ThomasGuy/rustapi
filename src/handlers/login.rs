@@ -2,11 +2,7 @@ use crate::auth::claims::{encode_token, Claims, TokenType};
 use crate::db::{get_connection, DbConnection};
 use crate::models::users::User;
 use crate::schema::{refresh_tokens, users};
-use crate::utils::{
-    app_error::AppError,
-    app_state::{AppJson, AppResult, AppState},
-    password::verify_password,
-};
+use crate::utils::{verify_password, AppError, AppJson, AppResult, AppState};
 use axum::http::StatusCode;
 use axum::{extract::State, Json};
 use diesel::prelude::*;
@@ -16,17 +12,19 @@ use sha2::{Digest, Sha256};
 
 #[derive(Deserialize)]
 pub struct LoginRequest {
-    pub email: String,
+    pub username: String,
     pub password: String,
 }
 
 #[derive(Serialize)]
 pub struct AuthResponse {
+    #[serde(rename = "authToken")]
     pub access_token: String,
     pub refresh_token: String,
     pub user: User,
 }
 
+#[tracing::instrument(skip(state, payload), fields(user.username = %payload.username))]
 pub async fn login(
     State(state): State<AppState>,
     AppJson(payload): AppJson<LoginRequest>,
@@ -35,7 +33,7 @@ pub async fn login(
 
     // 1. Find user
     let user = users::table
-        .filter(users::email.eq(&payload.email))
+        .filter(users::username.eq(&payload.username))
         .first::<User>(&mut conn)
         .map_err(|_| AppError::Auth("User not found".into()))?;
 
@@ -45,7 +43,7 @@ pub async fn login(
     }
 
     // 3. Generate tokens (Access & Refresh)
-    let keys = state.public_keys.read().unwrap();
+    let keys = &state.public_keys;
     let access_token = encode_token(user.id, &keys, 15, TokenType::Access)?; // 15 mins
     let refresh_token = encode_token(user.id, &keys, 10080, TokenType::Refresh)?; // 7 days
 
@@ -95,3 +93,18 @@ pub async fn logout(
 
     Ok(StatusCode::NO_CONTENT)
 }
+
+// pub async fn logout_all_devices(
+//     State(state): State<AppState>,
+//     claims: Claims, // Extracted from Access Token
+// ) -> AppResult<StatusCode> {
+//     let mut conn = get_connection(&state.pool).await?;
+//     let user_id = Uuid::parse_str(&claims.sub).unwrap();
+
+//     diesel::delete(refresh_tokens::table)
+//         .filter(refresh_tokens::user_id.eq(user_id))
+//         .execute(&mut conn)
+//         .map_err(DbError::from)?;
+
+//     Ok(StatusCode::NO_CONTENT)
+// }

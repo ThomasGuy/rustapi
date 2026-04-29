@@ -15,7 +15,7 @@ pub struct Comment {
     pub post_id: Uuid,
     pub user_id: Uuid,
     pub username: String,
-    pub text: String,
+    pub comment: String,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
 }
@@ -26,11 +26,20 @@ pub struct NewComment {
     pub post_id: Uuid,
     pub user_id: Uuid,
     pub username: String,
-    pub text: String,
+    pub comment: String,
 }
 
 #[derive(Debug, AsChangeset, Deserialize)]
 #[diesel(table_name = comments)]
 pub struct UpdateComment {
-    pub text: Option<String>,
+    pub comment: Option<String>,
 }
+
+// #[derive(Debug, Serialize, Queryable)]
+// #[diesel(table_name = comments)]
+// pub struct CommentDisplay {
+//     pub id: Uuid,
+//     pub text: String,
+//     pub username: String,
+//     pub timestamp: NaiveDateTime,
+// }

@@ -5,7 +5,7 @@ use axum::{
     Json,
 };
 
-use super::db_error::{ApiError, DbError};
+use super::{ApiError, DbError};
 
 #[derive(Debug, thiserror::Error)]
 pub enum AppError {

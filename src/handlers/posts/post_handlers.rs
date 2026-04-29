@@ -13,12 +13,9 @@ use uuid::Uuid;
 use crate::auth::current_user::CurrentUser;
 use crate::schema::posts;
 use crate::{
-    db::{get_connection, DbConnection, DbPool},
+    db::{get_connection, DbConnection},
     models::posts::{NewPost, Post},
-    utils::{
-        app_state::{AppJson, AppResult, ImageUrlType},
-        db_error::DbError,
-    },
+    utils::{AppJson, AppResult, AppState, DbError, ImageUrlType},
 };
 
 #[derive(Debug, Deserialize)]
@@ -30,17 +27,18 @@ pub struct ImageRequest {
 
 pub async fn create_posts(
     CurrentUser(user): CurrentUser,
-    State(pool): State<DbPool>,
+    State(state): State<AppState>,
     AppJson(payload): AppJson<ImageRequest>,
 ) -> AppResult<(StatusCode, Json<Post>)> {
     let new_post = NewPost {
         user_id: user.id,
         caption: payload.caption,
+        username: user.username,
         image_url: payload.image_url,
         image_url_type: payload.image_url_type.into(),
     };
 
-    let mut conn: DbConnection = get_connection(&pool).await?;
+    let mut conn: DbConnection = get_connection(&state.pool).await?;
 
     let post = diesel::insert_into(posts::table)
         .values(&new_post)
@@ -95,10 +93,10 @@ pub async fn upload_image(mut multipart: Multipart) -> AppResult<Json<ImgPath>> 
 }
 
 pub async fn get_my_posts(
-    State(pool): State<DbPool>,
+    State(state): State<AppState>,
     CurrentUser(user): CurrentUser,
 ) -> AppResult<Json<Vec<Post>>> {
-    let mut conn: DbConnection = get_connection(&pool).await?;
+    let mut conn: DbConnection = get_connection(&state.pool).await?;
 
     let my_posts = posts::table
         .filter(posts::user_id.eq(user.id))
@@ -109,11 +107,11 @@ pub async fn get_my_posts(
 }
 
 pub async fn delete_post(
-    State(pool): State<DbPool>,
+    State(state): State<AppState>,
     CurrentUser(user): CurrentUser,
     Path(post_id): Path<Uuid>, // The ID of the post to delete
 ) -> AppResult<StatusCode> {
-    let mut conn: DbConnection = get_connection(&pool).await?;
+    let mut conn: DbConnection = get_connection(&state.pool).await?;
 
     // Only delete if BOTH the post_id and user_id match
     let count = diesel::delete(

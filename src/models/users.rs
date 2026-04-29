@@ -30,7 +30,17 @@ pub struct NewUser {
     pub email: String,
     pub username: String,
     pub password_hash: String,
-    pub display_name: Option<String>,
-    pub bio: Option<String>,
-    pub avatar_url: Option<String>,
+    // pub display_name: Option<String>,
+    // pub bio: Option<String>,
+    // pub avatar_url: Option<String>,
+}
+
+#[derive(Debug, Insertable, Serialize, Deserialize)]
+#[diesel(table_name = users)]
+pub struct DisplayUser {
+    pub id: Uuid,
+    pub email: String,
+    pub username: String,
+    pub last_login_at: Option<NaiveDateTime>,
+    pub created_at: NaiveDateTime,
 }

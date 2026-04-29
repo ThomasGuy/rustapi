@@ -14,7 +14,7 @@ pub struct ApiError {
 
 // Custom error type for database operations
 #[derive(Debug, thiserror::Error)]
-pub(crate) enum DbError {
+pub enum DbError {
     #[error("Not found: {0}")]
     NotFound(String),
 
@@ -26,9 +26,6 @@ pub(crate) enum DbError {
 
     #[error("Pool timeout or initialization error: {0}")]
     PoolError(#[from] diesel::r2d2::PoolError),
-
-    #[error("Generic error: {0}")]
-    Generic(String),
 
     #[error("Internal task error: {0}")]
     JoinError(#[from] tokio::task::JoinError),
@@ -61,10 +58,6 @@ impl IntoResponse for DbError {
             DbError::PoolError(err) => (
                 StatusCode::SERVICE_UNAVAILABLE,
                 format!("Connection pool error: {err}"),
-            ),
-            DbError::Generic(msg) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Internal error: {msg}"),
             ),
             DbError::JoinError(err) => (
                 StatusCode::INTERNAL_SERVER_ERROR,

@@ -32,7 +32,7 @@ tower-http = {version = "0.6", features = ["cors", "timeout", "trace", "fs", "li
 
 # Authentication
 bcrypt = "0.19"
-jsonwebtoken = "10.3"
+jsonwebtoken = {version = "10.3", default-features = false, features = ["rust_crypto"]}
 sha2 = "0.11.0"
 
 # Error Handling
@@ -44,6 +44,6 @@ tracing = "0.1"
 tracing-subscriber = {version = "0.3", features = ["env-filter", "json"]}
 
 # Testing
+hex = "0.4.3"
 http-body-util = "0.1"
 tower-service = "0.3"
-hex = "0.4.3"

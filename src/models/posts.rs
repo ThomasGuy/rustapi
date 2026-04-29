@@ -13,8 +13,8 @@ use super::users::User;
 pub struct Post {
     pub id: Uuid,
     pub user_id: Uuid,
-    // pub title: String,
     pub caption: Option<String>,
+    pub username: String,
     pub image_url: String,
     pub image_url_type: String,
     // pub published: bool,
@@ -30,6 +30,7 @@ pub struct NewPost {
     pub user_id: Uuid,
     // pub title: String,
     pub caption: Option<String>,
+    pub username: String,
     pub image_url: String,
     pub image_url_type: String,
     // pub published: Option<bool>,
@@ -47,15 +48,17 @@ pub struct UpdatePost {
     // pub published_at: Option<NaiveDateTime>,
 }
 
-// For listings with author info
+// front end display post
 // #[derive(Debug, Queryable, Serialize)]
-// pub struct PostWithAuthor {
+// #[diesel(base_query = posts::table.order_by(posts::created_at.asc()))]
+// #[diesel(check_for_backend(diesel::pg::Pg))]
+// pub struct PostDisplay {
 //     pub id: Uuid,
-//     pub title: String,
-//     pub slug: String,
-//     pub excerpt: Option<String>,
-//     pub published_at: Option<NaiveDateTime>,
-//     pub view_count: i32,
-//     pub author_username: String,
-//     pub author_display_name: Option<String>,
+//     pub image_url: String,
+//     pub image_url_type: String,
+//     pub caption: Option<String>,
+//     pub user_id: Uuid,
+//     pub username: String,
+//     pub timestamp: NaiveDateTime,
+//     pub comments: Vec<CommentDisplay>,
 // }

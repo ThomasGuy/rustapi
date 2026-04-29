@@ -1,4 +1,4 @@
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 use crate::auth::claims::TokenKeys;
 use crate::db::DbPool;
@@ -13,7 +13,7 @@ pub type AppResult<T> = Result<T, AppError>;
 pub struct AppState {
     pub pool: DbPool,
     pub config: Arc<AppConfig>,
-    pub(crate) public_keys: Arc<RwLock<TokenKeys>>,
+    pub(crate) public_keys: Arc<TokenKeys>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

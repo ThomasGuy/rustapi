@@ -1,5 +1,5 @@
 -- Your SQL goes here
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email VARCHAR(255) NOT NULL UNIQUE,
   username VARCHAR(100) NOT NULL UNIQUE,

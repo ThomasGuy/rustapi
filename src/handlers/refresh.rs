@@ -1,3 +1,4 @@
+// use axum::http::StatusCode;
 use axum::{extract::State, Json};
 use diesel::prelude::*;
 use hex;
@@ -13,10 +14,7 @@ use crate::models::users::User;
 use crate::schema::{refresh_tokens, users};
 
 use crate::utils::db_error::DbError;
-use crate::utils::{
-    app_error::AppError,
-    app_state::{AppJson, AppResult, AppState},
-};
+use crate::utils::{AppError, AppJson, AppResult, AppState};
 
 use super::login::AuthResponse;
 
@@ -29,14 +27,17 @@ pub async fn refresh_handler(
     State(state): State<AppState>,
     AppJson(payload): AppJson<RefreshRequest>,
 ) -> AppResult<Json<AuthResponse>> {
-    let keys = state.public_keys.read().unwrap();
     let mut conn: DbConnection = get_connection(&state.pool).await?;
+    let keys = &state.public_keys;
+
+    // let mut validation = jsonwebtoken::Validation::default();
+    // validation.validate_exp = true;
 
     // 1. Decode and validate the provided refresh token
     let token_data = decode::<Claims>(
         &payload.refresh_token,
         &keys.decoding_key,
-        &Validation::new(Algorithm::HS256),
+        &Validation::default(),
     )
     .map_err(|_| AppError::Auth("Invalid refresh token".into()))?;
 

@@ -1,9 +1,9 @@
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 use super::{Claims, TokenKeys};
 use crate::db::{get_connection, DbConnection, DbPool};
 use crate::schema::users;
-use crate::utils::app_error::AppError;
+use crate::utils::AppError;
 use axum::{
     extract::{FromRef, FromRequestParts},
     http::request::Parts,
@@ -18,7 +18,7 @@ pub struct CurrentUser(pub User);
 impl<S> FromRequestParts<S> for CurrentUser
 where
     DbPool: FromRef<S>,
-    Arc<RwLock<TokenKeys>>: FromRef<S>,
+    Arc<TokenKeys>: FromRef<S>,
     S: Send + Sync,
 {
     type Rejection = AppError;

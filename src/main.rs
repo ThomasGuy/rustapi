@@ -7,7 +7,7 @@ pub(crate) mod routes;
 pub(crate) mod schema;
 pub(crate) mod utils;
 
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 use axum::{
     body::Body,
@@ -57,7 +57,7 @@ async fn main() -> anyhow::Result<()> {
     let cors = CorsLayer::new()
         // Allow specific origin; use Any for development
         .allow_origin(
-            "http://localhost:8000"
+            "http://localhost:5173"
                 .parse::<http::HeaderValue>()
                 .unwrap(),
         )
@@ -82,7 +82,7 @@ async fn main() -> anyhow::Result<()> {
     let state = AppState {
         pool: pool.clone(),
         config: Arc::new(config.clone()),
-        public_keys: Arc::new(RwLock::new(keys)),
+        public_keys: Arc::new(keys),
     };
 
     let app = create_routes(state).layer(trace_layer).layer(cors);

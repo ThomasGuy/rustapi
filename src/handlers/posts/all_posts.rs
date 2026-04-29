@@ -1,0 +1,86 @@
+use axum::{extract::State, Json};
+use chrono::NaiveDateTime;
+use diesel::prelude::*;
+use diesel::RunQueryDsl;
+use serde::Serialize;
+use uuid::Uuid;
+
+use crate::schema::{comments, posts};
+use crate::{
+    db::{get_connection, DbConnection},
+    models::{comments::Comment, posts::Post},
+    utils::{AppResult, AppState, DbError},
+};
+
+#[derive(Serialize)]
+pub struct UserSummary {
+    pub username: String,
+}
+
+#[derive(Serialize)]
+pub struct PostResponse {
+    pub id: Uuid,
+    pub image_url: String,
+    pub image_url_type: String,
+    pub caption: Option<String>,
+    pub user_id: Uuid,
+    pub user: UserSummary, // Matches TS: user: { username }
+    pub timestamp: NaiveDateTime,
+    pub comments: Vec<IComment>, // Matches TS: IComment[]
+}
+
+#[derive(Serialize)]
+pub struct IComment {
+    pub id: Uuid,
+    pub text: String, // Matches TS 'text'
+    pub username: String,
+    pub timestamp: NaiveDateTime,
+}
+
+pub async fn all_posts(State(state): State<AppState>) -> AppResult<Json<Vec<PostResponse>>> {
+    let mut conn: DbConnection = get_connection(&state.pool).await?;
+
+    // 1. Fetch Posts
+    let posts_data = posts::table
+        .order(posts::created_at.desc())
+        .load::<Post>(&mut conn)
+        .map_err(DbError::from)?;
+
+    // 2. Fetch Comments for these posts
+    let post_ids: Vec<Uuid> = posts_data.iter().map(|p| p.id).collect();
+    let all_comments = comments::table
+        .filter(comments::post_id.eq_any(post_ids))
+        .load::<Comment>(&mut conn)
+        .map_err(DbError::from)?;
+
+    // 3. Group comments by post_id
+    let mut comments_map: std::collections::HashMap<Uuid, Vec<IComment>> =
+        std::collections::HashMap::new();
+    for c in all_comments {
+        comments_map.entry(c.post_id).or_default().push(IComment {
+            id: c.id,
+            text: c.comment,
+            username: c.username,
+            timestamp: c.created_at,
+        });
+    }
+
+    // 4. Map to Frontend Interface
+    let response = posts_data
+        .into_iter()
+        .map(|p| PostResponse {
+            id: p.id,
+            image_url: p.image_url,
+            image_url_type: p.image_url_type,
+            caption: p.caption,
+            user_id: p.user_id,
+            user: UserSummary {
+                username: p.username,
+            }, // Map 'p.username' to nested object
+            timestamp: p.created_at,
+            comments: comments_map.remove(&p.id).unwrap_or_default(),
+        })
+        .collect();
+
+    Ok(Json(response))
+}

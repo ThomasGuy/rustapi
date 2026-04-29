@@ -1,3 +1,4 @@
+pub(crate) mod comments;
 pub(crate) mod health;
 pub(crate) mod login;
 pub(crate) mod posts;
