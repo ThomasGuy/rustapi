@@ -1,4 +1,4 @@
-use crate::auth::claims::{encode_token, Claims, TokenType};
+use crate::auth::{encode_token, CurrentUser, TokenType};
 use crate::db::{get_connection, DbConnection};
 use crate::models::users::User;
 use crate::schema::{refresh_tokens, users};
@@ -20,6 +20,8 @@ pub struct LoginRequest {
 pub struct AuthResponse {
     #[serde(rename = "authToken")]
     pub access_token: String,
+    #[serde(rename = "authTokenType")]
+    pub token_type: String,
     pub refresh_token: String,
     pub user: User,
 }
@@ -44,8 +46,8 @@ pub async fn login(
 
     // 3. Generate tokens (Access & Refresh)
     let keys = &state.public_keys;
-    let access_token = encode_token(user.id, &keys, 15, TokenType::Access)?; // 15 mins
-    let refresh_token = encode_token(user.id, &keys, 10080, TokenType::Refresh)?; // 7 days
+    let access_token = encode_token(user.id, keys, 15, TokenType::Access)?; // 15 mins
+    let refresh_token = encode_token(user.id, keys, 10080, TokenType::Refresh)?; // 7 days
 
     let hash_bytes = Sha256::digest(refresh_token.as_bytes());
     let refresh_hash = hex::encode(hash_bytes);
@@ -59,8 +61,10 @@ pub async fn login(
         .execute(&mut conn)
         .map_err(|e| AppError::Internal(format!("Failed to store session: {}", e)))?;
 
+    tracing::info!(user_id=%user.id, user_name=%user.username, "login success");
     Ok(Json(AuthResponse {
         access_token,
+        token_type: "Bearer".to_string(),
         refresh_token,
         user,
     }))
@@ -73,7 +77,7 @@ pub struct LogoutRequest {
 
 pub async fn logout(
     State(state): State<AppState>,
-    _claims: Claims, // Optional: ensures user is authenticated via Access Token
+    CurrentUser(user): CurrentUser, // Optional: ensures user is authenticated via Access Token
     AppJson(payload): AppJson<LogoutRequest>,
 ) -> AppResult<StatusCode> {
     let mut conn: DbConnection = get_connection(&state.pool).await?;
@@ -90,7 +94,7 @@ pub async fn logout(
     if deleted == 0 {
         return Err(AppError::Auth("Session already invalid".into()));
     }
-
+    tracing::info!(user_id=%user.id, user_name=%user.username, "logout success");
     Ok(StatusCode::NO_CONTENT)
 }
 

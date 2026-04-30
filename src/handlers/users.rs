@@ -1,11 +1,8 @@
-use std::sync::Arc;
-
 use axum::{extract::State, http::StatusCode, Json};
 use diesel::prelude::*;
 use serde::Deserialize;
 
-use crate::auth::current_user::CurrentUser;
-use crate::config::AppConfig;
+use crate::auth::CurrentUser;
 use crate::db::{get_connection, DbConnection};
 use crate::models::users::{NewUser, User};
 use crate::schema::users;
@@ -47,7 +44,7 @@ pub async fn register(
 // GET /api/user
 pub async fn all_users(
     State(state): State<AppState>,
-    CurrentUser(user): CurrentUser,
+    CurrentUser(_user): CurrentUser,
 ) -> AppResult<Json<Vec<User>>> {
     let users_list = tokio::task::spawn_blocking(move || -> Result<Vec<User>, DbError> {
         let mut conn: DbConnection = state.pool.get().map_err(DbError::PoolError)?;
@@ -59,8 +56,4 @@ pub async fn all_users(
     .map_err(DbError::from)??;
 
     Ok(Json(users_list))
-}
-
-pub async fn get_config(State(_config): State<Arc<AppConfig>>) -> () {
-    todo!()
 }

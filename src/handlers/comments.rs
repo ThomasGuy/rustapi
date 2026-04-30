@@ -3,7 +3,7 @@ use diesel::prelude::*;
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::auth::current_user::CurrentUser;
+use crate::auth::CurrentUser;
 use crate::db::{get_connection, DbConnection};
 use crate::models::comments::{Comment, NewComment};
 use crate::schema::comments;

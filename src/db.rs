@@ -2,8 +2,7 @@ use diesel::pg::PgConnection;
 use diesel::r2d2::ConnectionManager;
 use diesel::r2d2::{Pool, PooledConnection};
 
-use crate::config::AppConfig;
-use crate::utils::db_error::DbError;
+use crate::utils::{AppConfig, DbError};
 
 // Type alias for cleaner code
 pub type DbPool = Pool<ConnectionManager<PgConnection>>;

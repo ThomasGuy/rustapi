@@ -47,18 +47,3 @@ pub struct UpdatePost {
     // pub published: Option<bool>,
     // pub published_at: Option<NaiveDateTime>,
 }
-
-// front end display post
-// #[derive(Debug, Queryable, Serialize)]
-// #[diesel(base_query = posts::table.order_by(posts::created_at.asc()))]
-// #[diesel(check_for_backend(diesel::pg::Pg))]
-// pub struct PostDisplay {
-//     pub id: Uuid,
-//     pub image_url: String,
-//     pub image_url_type: String,
-//     pub caption: Option<String>,
-//     pub user_id: Uuid,
-//     pub username: String,
-//     pub timestamp: NaiveDateTime,
-//     pub comments: Vec<CommentDisplay>,
-// }

@@ -6,15 +6,17 @@ use axum::{
     http::request::Parts,
 };
 
-use axum_extra::headers::{authorization::Bearer, Authorization};
-use axum_extra::TypedHeader;
-use jsonwebtoken::{decode, encode, Algorithm, Header, Validation};
+use axum_extra::{
+    headers::{authorization::Bearer, Authorization},
+    TypedHeader,
+};
+use jsonwebtoken::{decode, encode, Header, Validation};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::utils::AppError;
 
-pub(crate) struct TokenKeys {
+pub struct TokenKeys {
     pub encoding_key: jsonwebtoken::EncodingKey,
     pub decoding_key: jsonwebtoken::DecodingKey,
 }
@@ -32,14 +34,6 @@ pub struct Claims {
     pub token_type: TokenType,
 }
 
-// impl Claims {
-//     pub fn decode(token: &str, key: &jsonwebtoken::DecodingKey) -> Result<Self, AppError> {
-//         decode::<Self>(token, key, &jsonwebtoken::Validation::new(Algorithm::HS256))
-//             .map(|data| data.claims)
-//             .map_err(|_| AppError::Auth("Invalid or expired token".into()))
-//     }
-// }
-
 impl<S> FromRequestParts<S> for Claims
 where
     Arc<TokenKeys>: FromRef<S>,
@@ -56,8 +50,6 @@ where
 
         // 2. Get the Keys from State
         let keys = Arc::<TokenKeys>::from_ref(state);
-        // let mut validation = jsonwebtoken::Validation::default();
-        // validation.validate_exp = true;
 
         // 4. Decode using your keys logic
         let token_data =

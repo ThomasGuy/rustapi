@@ -5,6 +5,7 @@ use diesel::RunQueryDsl;
 use serde::Serialize;
 use uuid::Uuid;
 
+use crate::auth::CurrentUser;
 use crate::schema::{comments, posts};
 use crate::{
     db::{get_connection, DbConnection},
@@ -19,6 +20,7 @@ pub struct UserSummary {
 
 #[derive(Serialize)]
 pub struct PostResponse {
+    // Frontend Interface
     pub id: Uuid,
     pub image_url: String,
     pub image_url_type: String,
@@ -31,29 +33,27 @@ pub struct PostResponse {
 
 #[derive(Serialize)]
 pub struct IComment {
+    // Frontend interface
     pub id: Uuid,
     pub text: String, // Matches TS 'text'
     pub username: String,
     pub timestamp: NaiveDateTime,
 }
 
-pub async fn all_posts(State(state): State<AppState>) -> AppResult<Json<Vec<PostResponse>>> {
+async fn get_posts_reponse(
+    posts_data: Vec<Post>,
+    state: &AppState,
+) -> AppResult<Vec<PostResponse>> {
     let mut conn: DbConnection = get_connection(&state.pool).await?;
 
-    // 1. Fetch Posts
-    let posts_data = posts::table
-        .order(posts::created_at.desc())
-        .load::<Post>(&mut conn)
-        .map_err(DbError::from)?;
-
-    // 2. Fetch Comments for these posts
+    // 1. Fetch Comments for posts_data
     let post_ids: Vec<Uuid> = posts_data.iter().map(|p| p.id).collect();
     let all_comments = comments::table
         .filter(comments::post_id.eq_any(post_ids))
         .load::<Comment>(&mut conn)
         .map_err(DbError::from)?;
 
-    // 3. Group comments by post_id
+    // 2. Group comments by post_id
     let mut comments_map: std::collections::HashMap<Uuid, Vec<IComment>> =
         std::collections::HashMap::new();
     for c in all_comments {
@@ -65,7 +65,7 @@ pub async fn all_posts(State(state): State<AppState>) -> AppResult<Json<Vec<Post
         });
     }
 
-    // 4. Map to Frontend Interface
+    // 3. Map to Frontend Interface
     let response = posts_data
         .into_iter()
         .map(|p| PostResponse {
@@ -81,6 +81,38 @@ pub async fn all_posts(State(state): State<AppState>) -> AppResult<Json<Vec<Post
             comments: comments_map.remove(&p.id).unwrap_or_default(),
         })
         .collect();
+
+    Ok(response)
+}
+
+pub async fn all_posts(State(state): State<AppState>) -> AppResult<Json<Vec<PostResponse>>> {
+    let mut conn: DbConnection = get_connection(&state.pool).await?;
+
+    // 1. Fetch Posts
+    let posts_data = posts::table
+        .order(posts::created_at.desc())
+        .load::<Post>(&mut conn)
+        .map_err(DbError::from)?;
+
+    tracing::info!(num_posts=%posts_data.len(), "all_posts success");
+    let response = get_posts_reponse(posts_data, &state).await?;
+    Ok(Json(response))
+}
+
+pub async fn get_my_posts(
+    State(state): State<AppState>,
+    CurrentUser(user): CurrentUser,
+) -> AppResult<Json<Vec<PostResponse>>> {
+    let mut conn: DbConnection = get_connection(&state.pool).await?;
+
+    // Fetch posts
+    let my_posts = posts::table
+        .filter(posts::user_id.eq(user.id))
+        .order(posts::created_at.desc())
+        .load::<Post>(&mut conn)
+        .map_err(DbError::from)?;
+
+    let response = get_posts_reponse(my_posts, &state).await?;
 
     Ok(Json(response))
 }

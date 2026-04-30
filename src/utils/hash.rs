@@ -1,6 +1,6 @@
 use bcrypt;
 
-use crate::utils::app_error::AppError;
+use crate::utils::AppError;
 
 pub fn hash_password(password: &str) -> Result<String, AppError> {
     bcrypt::hash(password, bcrypt::DEFAULT_COST)

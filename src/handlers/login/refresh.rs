@@ -2,21 +2,18 @@
 use axum::{extract::State, Json};
 use diesel::prelude::*;
 use hex;
-use jsonwebtoken::{decode, Algorithm, Validation};
+use jsonwebtoken::{decode, Validation};
 use serde::Deserialize;
 use sha2::{Digest, Sha256}; // Add 'sha2' crate to hash tokens before storing
 use uuid::Uuid;
 
-use crate::auth::claims::Claims;
-use crate::auth::claims::{encode_token, TokenType};
+use crate::auth::{encode_token, Claims, TokenType};
 use crate::db::{get_connection, DbConnection};
 use crate::models::users::User;
 use crate::schema::{refresh_tokens, users};
+use crate::utils::{AppError, AppJson, AppResult, AppState, DbError};
 
-use crate::utils::db_error::DbError;
-use crate::utils::{AppError, AppJson, AppResult, AppState};
-
-use super::login::AuthResponse;
+use super::AuthResponse;
 
 #[derive(Deserialize)]
 pub struct RefreshRequest {
@@ -29,9 +26,6 @@ pub async fn refresh_handler(
 ) -> AppResult<Json<AuthResponse>> {
     let mut conn: DbConnection = get_connection(&state.pool).await?;
     let keys = &state.public_keys;
-
-    // let mut validation = jsonwebtoken::Validation::default();
-    // validation.validate_exp = true;
 
     // 1. Decode and validate the provided refresh token
     let token_data = decode::<Claims>(
@@ -76,8 +70,8 @@ pub async fn refresh_handler(
         .map_err(|_| AppError::Auth("User no longer exists".into()))?;
 
     // 5. Issue new tokens
-    let new_access = encode_token(user.id, &keys, 15, TokenType::Access)?;
-    let new_refresh_raw = encode_token(user.id, &keys, 10080, TokenType::Refresh)?;
+    let new_access = encode_token(user.id, keys, 15, TokenType::Access)?;
+    let new_refresh_raw = encode_token(user.id, keys, 10080, TokenType::Refresh)?;
 
     // 6. Hash and Store the NEW refresh token
     let hash_bytes = Sha256::digest(new_refresh_raw.as_bytes());
@@ -94,6 +88,7 @@ pub async fn refresh_handler(
     Ok(Json(AuthResponse {
         access_token: new_access,
         refresh_token: new_refresh_raw,
+        token_type: "Bearer".to_string(),
         user,
     }))
 }

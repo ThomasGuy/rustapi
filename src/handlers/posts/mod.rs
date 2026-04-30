@@ -1,7 +1,9 @@
-pub mod all_posts;
-pub mod post_handlers;
+pub mod all_posts_handler;
+pub mod image_handler;
+pub mod post_handler;
 
 pub use {
-    all_posts::all_posts,
-    post_handlers::{create_posts, delete_post, get_my_posts, upload_image},
+    all_posts_handler::{all_posts, get_my_posts},
+    image_handler::upload_image,
+    post_handler::{create_posts, delete_post},
 };

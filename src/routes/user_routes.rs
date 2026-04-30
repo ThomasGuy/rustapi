@@ -1,20 +1,21 @@
-// use axum::{
-//     // extract::{Path, Query},
-//     routing::{get, post},
-//     Router,
-// };
-// use serde::Deserialize;
+use axum::{
+    routing::{get, post},
+    Router,
+};
 
-// use crate::{
-// db::DbPool,
-// handlers::users::{all_users, create_user, get_config},
-// utils::app_state::AppState,
-// };
+use crate::{
+    handlers::{
+        login::{login, logout, refresh_handler},
+        users::{all_users, register},
+    },
+    utils::AppState,
+};
 
-// pub fn user_routes(state: AppState) -> Router {
-//     Router::new()
-//         .route("/api/user", get(all_users))
-//         .route("/api/user", post(create_user))
-//         .route("/config", get(get_config))
-//         .with_state(state)
-// }
+pub fn user_routes() -> Router<AppState> {
+    Router::new()
+        .route("/", get(all_users))
+        .route("/signup", post(register))
+        .route("/login", post(login))
+        .route("/logout", post(logout))
+        .route("/refresh", post(refresh_handler))
+}

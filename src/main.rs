@@ -1,5 +1,4 @@
 pub(crate) mod auth;
-pub(crate) mod config;
 pub(crate) mod db;
 pub(crate) mod handlers;
 pub(crate) mod models;
@@ -26,7 +25,7 @@ use uuid::Uuid;
 use auth::claims::TokenKeys;
 use db::{get_connection, init_pool, DbConnection, DbPool};
 use routes::create_routes;
-use utils::app_state::AppState;
+use utils::AppState;
 
 // This macro reads your migrations at compile time
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
@@ -65,7 +64,7 @@ async fn main() -> anyhow::Result<()> {
         .allow_headers([CONTENT_TYPE, AUTHORIZATION])
         .allow_credentials(true);
 
-    let config = config::AppConfig::from_env();
+    let config = utils::AppConfig::from_env();
     let pool: DbPool = init_pool(&config)?;
 
     // run migrations
@@ -85,7 +84,11 @@ async fn main() -> anyhow::Result<()> {
         public_keys: Arc::new(keys),
     };
 
-    let app = create_routes(state).layer(trace_layer).layer(cors);
+    let app = create_routes()
+        .with_state(state)
+        .layer(trace_layer)
+        .layer(cors);
+
     tokio::fs::create_dir_all("./images").await?;
 
     // Start server

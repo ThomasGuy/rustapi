@@ -34,12 +34,3 @@ pub struct NewComment {
 pub struct UpdateComment {
     pub comment: Option<String>,
 }
-
-// #[derive(Debug, Serialize, Queryable)]
-// #[diesel(table_name = comments)]
-// pub struct CommentDisplay {
-//     pub id: Uuid,
-//     pub text: String,
-//     pub username: String,
-//     pub timestamp: NaiveDateTime,
-// }

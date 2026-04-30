@@ -1,4 +1,5 @@
 pub(crate) mod claims;
 pub(crate) mod current_user;
 
-use claims::{Claims, TokenKeys};
+pub use claims::{encode_token, Claims, TokenKeys, TokenType};
+pub use current_user::CurrentUser;
