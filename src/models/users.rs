@@ -27,8 +27,8 @@ pub struct User {
 #[derive(Debug, Insertable, Deserialize)]
 #[diesel(table_name = users)]
 pub struct NewUser {
-    pub email: String,
     pub username: String,
+    pub email: String,
     pub password_hash: String,
     // pub display_name: Option<String>,
     // pub bio: Option<String>,

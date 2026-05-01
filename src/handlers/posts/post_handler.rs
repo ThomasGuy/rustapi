@@ -86,7 +86,7 @@ pub async fn delete_post(
     .map_err(DbError::from)?;
 
     if count == 0 {
-        tracing::error!(user_id=%user.id, "No post to delete");
+        tracing::error!(user_id=%user.id, "Post nor found or unauthorized");
         // If no rows were deleted, either the post doesn't exist
         // or the current user doesn't own it.
         // let db_err = DbError::NotFound("Post not found or unauthorized".into());

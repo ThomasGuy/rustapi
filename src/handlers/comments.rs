@@ -34,5 +34,6 @@ pub async fn create_comment(
         .get_result::<Comment>(&mut conn)
         .map_err(DbError::from)?;
 
+    tracing::info!(user_id=%user.id, comment_id=%saved_comment.id, "new comment");
     Ok(Json(saved_comment))
 }

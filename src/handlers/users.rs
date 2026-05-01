@@ -25,8 +25,8 @@ pub async fn register(
     let hashed = hash_password(&payload.password)?;
 
     let new_user = NewUser {
-        email: payload.email,
         username: payload.username,
+        email: payload.email,
         password_hash: hashed,
     };
 
