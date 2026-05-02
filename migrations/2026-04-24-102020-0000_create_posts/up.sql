@@ -3,7 +3,7 @@ CREATE TABLE posts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   caption TEXT NULL,
-  username VARCHAR(255) NOT NULL UNIQUE,
+  username VARCHAR(255) NOT NULL,
   image_url TEXT NOT NULL UNIQUE,
   image_url_type VARCHAR(64) NOT NULL DEFAULT 'relative',
   -- published BOOLEAN NOT NULL DEFAULT false,

@@ -28,7 +28,7 @@ tokio = {version = "1.52", features = ["full"]}
 
 # Tower Ecosystem
 tower = {version = "0.5", features = ["full"]}
-tower-http = {version = "0.6", features = ["cors", "timeout", "trace", "fs", "limit"]}
+tower-http = {version = "0.6", features = ["cors", "trace", "fs", "limit", "util"]}
 
 # Authentication
 bcrypt = "0.19"

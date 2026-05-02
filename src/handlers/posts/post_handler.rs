@@ -13,7 +13,7 @@ use crate::schema::posts;
 use crate::{
     db::{get_connection, DbConnection},
     models::posts::{NewPost, Post},
-    utils::{AppJson, AppResult, AppState, DbError},
+    utils::{AppError, AppJson, AppResult, AppState, DbError},
 };
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -91,7 +91,9 @@ pub async fn delete_post(
         // or the current user doesn't own it.
         // let db_err = DbError::NotFound("Post not found or unauthorized".into());
         // return Err(AppError::Db(db_err));
-        return Err(DbError::NotFound("Post not found or unauthorized".into()).into());
+        return Err(AppError::Forbidden(
+            "Unauthorized -- not your post --".into(),
+        ));
     }
     tracing::info!(user_id=%user.id, "Post deleted");
     Ok(StatusCode::NO_CONTENT)

@@ -19,7 +19,7 @@ pub enum AppError {
     Auth(String), // For login/Auth
 
     #[error("Forbidden")]
-    Forbidden, // User is logged in but doesn't own this resource
+    Forbidden(String), // User is logged in but doesn't own this resource
 
     #[error("Multipart malformed: {0}")]
     MultipartError(#[from] axum::extract::multipart::MultipartError),
@@ -55,12 +55,12 @@ impl IntoResponse for AppError {
                 )
                     .into_response()
             }
-            AppError::Forbidden => {
+            AppError::Forbidden(err) => {
                 let status = StatusCode::FORBIDDEN;
                 (
                     status,
                     Json(ApiError {
-                        error: "Forbidden".into(),
+                        error: format!("Forbidden: {err}"),
                         status: status.as_u16(),
                     }),
                 )
@@ -71,7 +71,7 @@ impl IntoResponse for AppError {
                 (
                     status,
                     Json(ApiError {
-                        error: format!("file I?O upload error: {err}"),
+                        error: format!("file I/O upload error: {err}"),
                         status: status.as_u16(),
                     }),
                 )

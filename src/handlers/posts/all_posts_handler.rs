@@ -35,7 +35,7 @@ pub struct PostResponse {
 pub struct IComment {
     // Frontend interface
     pub id: Uuid,
-    pub text: String, // Matches TS 'text'
+    pub comment: String, // Matches TS 'text'
     pub username: String,
     pub timestamp: NaiveDateTime,
 }
@@ -50,6 +50,7 @@ async fn get_posts_reponse(
     let post_ids: Vec<Uuid> = posts_data.iter().map(|p| p.id).collect();
     let all_comments = comments::table
         .filter(comments::post_id.eq_any(post_ids))
+        .order(comments::created_at.desc())
         .load::<Comment>(&mut conn)
         .map_err(DbError::from)?;
 
@@ -59,7 +60,7 @@ async fn get_posts_reponse(
     for c in all_comments {
         comments_map.entry(c.post_id).or_default().push(IComment {
             id: c.id,
-            text: c.comment,
+            comment: c.comment,
             username: c.username,
             timestamp: c.created_at,
         });
