@@ -14,14 +14,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    likes (user_id, post_id) {
-        user_id -> Uuid,
-        post_id -> Uuid,
-        created_at -> Timestamp,
-    }
-}
-
-diesel::table! {
     posts (id) {
         id -> Uuid,
         user_id -> Uuid,
@@ -72,9 +64,7 @@ diesel::table! {
 
 diesel::joinable!(comments -> posts (post_id));
 diesel::joinable!(comments -> users (user_id));
-diesel::joinable!(likes -> posts (post_id));
-diesel::joinable!(likes -> users (user_id));
 diesel::joinable!(posts -> users (user_id));
 diesel::joinable!(refresh_tokens -> users (user_id));
 
-diesel::allow_tables_to_appear_in_same_query!(comments, likes, posts, refresh_tokens, users,);
+diesel::allow_tables_to_appear_in_same_query!(comments, posts, refresh_tokens, users,);

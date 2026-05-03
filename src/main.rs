@@ -52,17 +52,22 @@ async fn main() -> anyhow::Result<()> {
         )
     });
 
-    // Define the CORS configuration
     let cors = CorsLayer::new()
-        // Allow specific origin; use Any for development
-        .allow_origin(
-            "http://localhost:5173"
-                .parse::<http::HeaderValue>()
-                .unwrap(),
-        )
-        .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::DELETE])
-        .allow_headers([CONTENT_TYPE, AUTHORIZATION])
-        .allow_credentials(true);
+        .allow_origin(tower_http::cors::Any) // Allows phone, tablet, and PC
+        .allow_methods(tower_http::cors::Any)
+        .allow_headers([AUTHORIZATION, CONTENT_TYPE]);
+
+    // Define the CORS configuration
+    // let cors = CorsLayer::new()
+    //     // Allow specific origin; use Any for development
+    //     .allow_origin(
+    //         "http://localhost:5173"
+    //             .parse::<http::HeaderValue>()
+    //             .unwrap(),
+    //     )
+    //     .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::DELETE])
+    //     .allow_headers([CONTENT_TYPE, AUTHORIZATION])
+    //     .allow_credentials(true);
 
     let config = utils::AppConfig::from_env();
     let pool: DbPool = init_pool(&config)?;

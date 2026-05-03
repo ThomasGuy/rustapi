@@ -46,7 +46,7 @@ pub async fn login(
 
     // 3. Generate tokens (Access & Refresh)
     let keys = &state.public_keys;
-    let access_token = encode_token(user.id, keys, 15, TokenType::Access)?; // 15 mins
+    let access_token = encode_token(user.id, keys, 1, TokenType::Access)?; // 15 mins
     let refresh_token = encode_token(user.id, keys, 10080, TokenType::Refresh)?; // 7 days
 
     let hash_bytes = Sha256::digest(refresh_token.as_bytes());

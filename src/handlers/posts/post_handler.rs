@@ -9,10 +9,13 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::auth::CurrentUser;
-use crate::schema::posts;
+use crate::schema::{likes, posts};
 use crate::{
     db::{get_connection, DbConnection},
-    models::posts::{NewPost, Post},
+    models::{
+        likes::Like,
+        posts::{NewPost, Post},
+    },
     utils::{AppError, AppJson, AppResult, AppState, DbError},
 };
 
@@ -97,4 +100,47 @@ pub async fn delete_post(
     }
     tracing::info!(user_id=%user.id, "Post deleted");
     Ok(StatusCode::NO_CONTENT)
+}
+
+// /post/like/:id
+pub async fn toggle_like(
+    State(state): State<AppState>,
+    CurrentUser(user): CurrentUser,
+    Path(post_id): Path<Uuid>,
+) -> AppResult<Json<serde_json::Value>> {
+    let mut conn: DbConnection = get_connection(&state.pool).await?;
+
+    // 1. Check if the like exists
+    let existing_like = likes::table
+        .filter(likes::user_id.eq(user.id))
+        .filter(likes::post_id.eq(post_id))
+        .first::<Like>(&mut conn)
+        .optional() // Returns Ok(None) if not found instead of an error
+        .map_err(DbError::from)?;
+
+    match existing_like {
+        Some(_) => {
+            // 2. UNLIKE: It exists, so remove it
+            diesel::delete(likes::table)
+                .filter(likes::user_id.eq(user.id))
+                .filter(likes::post_id.eq(post_id))
+                .execute(&mut conn)
+                .map_err(DbError::from)?;
+
+            Ok(Json(
+                serde_json::json!({ "status": "unliked", "post_id": post_id }),
+            ))
+        }
+        None => {
+            // 3. LIKE: It doesn't exist, so add it
+            diesel::insert_into(likes::table)
+                .values((likes::user_id.eq(user.id), likes::post_id.eq(post_id)))
+                .execute(&mut conn)
+                .map_err(DbError::from)?;
+
+            Ok(Json(
+                serde_json::json!({ "status": "liked", "post_id": post_id }),
+            ))
+        }
+    }
 }
