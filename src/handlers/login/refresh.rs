@@ -70,8 +70,8 @@ pub async fn refresh_handler(
         .map_err(|_| AppError::Auth("User no longer exists".into()))?;
 
     // 5. Issue new tokens
-    let new_access = encode_token(user.id, keys, 15, TokenType::Access)?;
-    let new_refresh_raw = encode_token(user.id, keys, 10080, TokenType::Refresh)?;
+    let new_access = encode_token(user.id, keys, 15, TokenType::Access, &state)?;
+    let new_refresh_raw = encode_token(user.id, keys, 10080, TokenType::Refresh, &state)?;
 
     // 6. Hash and Store the NEW refresh token
     let hash_bytes = Sha256::digest(new_refresh_raw.as_bytes());

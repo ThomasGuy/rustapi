@@ -28,6 +28,7 @@ pub async fn register(
         username: payload.username,
         email: payload.email,
         password_hash: hashed,
+        is_admin: false,
     };
 
     let user = diesel::insert_into(users::table)

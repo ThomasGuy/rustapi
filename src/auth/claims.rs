@@ -5,16 +5,18 @@ use axum::{
     extract::{FromRef, FromRequestParts},
     http::request::Parts,
 };
-
 use axum_extra::{
     headers::{authorization::Bearer, Authorization},
     TypedHeader,
 };
+use diesel::prelude::*;
 use jsonwebtoken::{decode, encode, Header, Validation};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::utils::AppError;
+use crate::db::DbConnection;
+use crate::schema::users;
+use crate::utils::{AppError, AppState, DbError};
 
 pub struct TokenKeys {
     pub encoding_key: jsonwebtoken::EncodingKey,
@@ -32,6 +34,7 @@ pub struct Claims {
     pub sub: String, // User ID
     pub exp: usize,  // Expiration time
     pub token_type: TokenType,
+    pub is_admin: bool,
 }
 
 impl<S> FromRequestParts<S> for Claims
@@ -71,17 +74,28 @@ pub fn encode_token(
     keys: &TokenKeys,
     minutes: i64,
     token_type: TokenType,
+    state: &AppState,
 ) -> Result<String, AppError> {
+    let mut conn: DbConnection = state.pool.get().map_err(DbError::from)?;
+
     let exp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_err(|_| AppError::Internal("Time went backwards".into()))?
         .as_secs() as i64
         + (minutes * 60);
 
+    // Look up the is_admin status for this specific user
+    let admin_status: bool = users::table
+        .filter(users::id.eq(user_id))
+        .select(users::is_admin)
+        .first(&mut conn)
+        .expect("User not found");
+
     let claims = Claims {
         sub: user_id.to_string(),
         exp: exp as usize,
         token_type,
+        is_admin: admin_status,
     };
 
     // Use &keys.encoding_key (ensure you have EncodingKey stored in your struct)

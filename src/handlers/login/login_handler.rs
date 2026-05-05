@@ -5,6 +5,8 @@ use crate::schema::{refresh_tokens, users};
 use crate::utils::{verify_password, AppError, AppJson, AppResult, AppState};
 use axum::http::StatusCode;
 use axum::{extract::State, Json};
+// use chrono::Utc;
+use diesel::dsl::now;
 use diesel::prelude::*;
 use hex;
 use serde::{Deserialize, Serialize};
@@ -44,10 +46,17 @@ pub async fn login(
         return Err(AppError::Auth("Invalid password".into()));
     }
 
+    // 2.a update user last_login_at
+    // let now = Utc::now().naive_utc();
+    diesel::update(users::table.filter(users::id.eq(user.id)))
+        .set(users::last_login_at.eq(now))
+        .execute(&mut conn)
+        .expect("Error updating last login");
+
     // 3. Generate tokens (Access & Refresh)
     let keys = &state.public_keys;
-    let access_token = encode_token(user.id, keys, 1, TokenType::Access)?; // 15 mins
-    let refresh_token = encode_token(user.id, keys, 10080, TokenType::Refresh)?; // 7 days
+    let access_token = encode_token(user.id, keys, 15, TokenType::Access, &state)?; // 15 mins
+    let refresh_token = encode_token(user.id, keys, 10080, TokenType::Refresh, &state)?; // 7 days
 
     let hash_bytes = Sha256::digest(refresh_token.as_bytes());
     let refresh_hash = hex::encode(hash_bytes);

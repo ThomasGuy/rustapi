@@ -6,14 +6,16 @@ pub(crate) mod routes;
 pub(crate) mod schema;
 pub(crate) mod utils;
 
+use diesel::prelude::*;
 use std::sync::Arc;
+use std::time::Duration;
+use tokio::time;
 
 use axum::{
     body::Body,
     http::{
-        self,
         header::{AUTHORIZATION, CONTENT_TYPE},
-        Method, Request,
+        Request,
     },
 };
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
@@ -95,6 +97,7 @@ async fn main() -> anyhow::Result<()> {
         .layer(cors);
 
     tokio::fs::create_dir_all("./images").await?;
+    tokio::spawn(clean_expired_tokens(pool.clone()));
 
     // Start server
     let addr = format!("{}:{}", config.host, config.port);
@@ -111,4 +114,22 @@ fn run_migrations(
     // This will run all pending migrations
     conn.run_pending_migrations(MIGRATIONS)?;
     Ok(())
+}
+
+async fn clean_expired_tokens(pool: DbPool) {
+    let mut interval = time::interval(Duration::from_secs(3600)); // Run every hour
+
+    loop {
+        interval.tick().await;
+        let mut conn: DbConnection = get_connection(&pool)
+            .await
+            .expect("Worker couldn't get connection");
+        use crate::schema::refresh_tokens::dsl::*;
+        let result = diesel::delete(refresh_tokens.filter(expires_at.lt(diesel::dsl::now)))
+            .execute(&mut conn);
+        match result {
+            Ok(count) => println!("Cleaned up {} expired tokens", count),
+            Err(e) => eprintln!("Error cleaning tokens: {}", e),
+        }
+    }
 }

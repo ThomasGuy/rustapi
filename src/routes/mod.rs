@@ -1,5 +1,6 @@
 mod post_routes;
 mod user_routes;
+mod admin_routes;
 
 use axum::{
     extract::DefaultBodyLimit,
@@ -15,6 +16,7 @@ use crate::{
 
 use post_routes::post_routes;
 use user_routes::user_routes;
+use admin_routes::admin_routes;
 
 pub fn create_routes() -> Router<AppState> {
     Router::new()
@@ -22,6 +24,7 @@ pub fn create_routes() -> Router<AppState> {
         .route("/comment", post(create_comment))
         .nest("/user", user_routes())
         .nest("/post", post_routes())
+        .nest("/admin", admin_routes())
         // Disable the default 2MB limit and set a new one (4MB)
         .layer(DefaultBodyLimit::disable())
         .layer(RequestBodyLimitLayer::new(7 * 1024 * 1024))
