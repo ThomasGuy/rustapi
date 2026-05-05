@@ -1,7 +1,6 @@
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    response::IntoResponse,
     Json,
 };
 use chrono::NaiveDateTime;
@@ -36,7 +35,7 @@ pub async fn admin_users(
         return Err(AppError::Forbidden("Admins only".into()));
     }
 
-    let mut conn: DbConnection = get_connection(&state.pool).await.map_err(DbError::from)?;
+    let mut conn: DbConnection = get_connection(&state.pool).await?;
 
     let response = users::table
         .select(UserResponse::as_select()) // Only fetches the 6 columns above
@@ -57,7 +56,7 @@ pub async fn delete_user_admin(
     if !user.is_admin {
         return Err(AppError::Forbidden("Admins only".into()));
     }
-    let mut conn: DbConnection = get_connection(&state.pool).await.map_err(DbError::from)?;
+    let mut conn: DbConnection = get_connection(&state.pool).await?;
 
     diesel::delete(users::table.filter(users::id.eq(target_id)))
         .execute(&mut conn)

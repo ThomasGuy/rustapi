@@ -7,8 +7,8 @@ pub(crate) mod schema;
 pub(crate) mod utils;
 
 use diesel::prelude::*;
-use std::sync::Arc;
 use std::time::Duration;
+use std::{fs, sync::Arc};
 use tokio::time;
 
 use axum::{
@@ -27,7 +27,8 @@ use uuid::Uuid;
 use auth::claims::TokenKeys;
 use db::{get_connection, init_pool, DbConnection, DbPool};
 use routes::create_routes;
-use utils::AppState;
+use schema::posts;
+use utils::{AppState, DbError};
 
 // This macro reads your migrations at compile time
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
@@ -98,6 +99,7 @@ async fn main() -> anyhow::Result<()> {
 
     tokio::fs::create_dir_all("./images").await?;
     tokio::spawn(clean_expired_tokens(pool.clone()));
+    tokio::spawn(clean_image_folder(pool.clone()));
 
     // Start server
     let addr = format!("{}:{}", config.host, config.port);
@@ -114,6 +116,31 @@ fn run_migrations(
     // This will run all pending migrations
     conn.run_pending_migrations(MIGRATIONS)?;
     Ok(())
+}
+
+async fn clean_image_folder(pool: DbPool) -> Result<(), DbError> {
+    let mut interval = time::interval(Duration::from_secs(3600 * 24)); // Run every day
+
+    loop {
+        interval.tick().await;
+        let mut conn: DbConnection = get_connection(&pool).await?;
+        let image_urls = posts::table
+            .select(posts::image_url)
+            .load::<String>(&mut conn)?;
+
+        for entry in fs::read_dir("./images")? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_file() {
+                // Assume filename maps to URL in DB
+                let file_name = path.file_name().unwrap().to_string_lossy().into_owned();
+                if !image_urls.contains(&file_name) {
+                    println!("Deleting: {:?}", path);
+                    fs::remove_file(path)?; // Delete file if not in set
+                }
+            }
+        }
+    }
 }
 
 async fn clean_expired_tokens(pool: DbPool) {
