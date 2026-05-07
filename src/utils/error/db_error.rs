@@ -15,9 +15,6 @@ pub struct ApiError {
 // Custom error type for database operations
 #[derive(Debug, thiserror::Error)]
 pub enum DbError {
-    #[error("Not found: {0}")]
-    NotFound(String),
-
     #[error("Database query error: {0}")]
     DatabaseError(#[from] diesel::result::Error),
 
@@ -37,10 +34,9 @@ pub enum DbError {
 impl IntoResponse for DbError {
     fn into_response(self) -> Response {
         let (status, message) = match self {
-            DbError::NotFound(msg) => (StatusCode::NOT_FOUND, msg),
             DbError::DatabaseError(err) => match err {
                 diesel::result::Error::NotFound => {
-                    (StatusCode::NOT_FOUND, "Resource not found.".to_string())
+                    (StatusCode::NOT_FOUND, "Resource not found.".into())
                 }
                 diesel::result::Error::DatabaseError(
                     diesel::result::DatabaseErrorKind::UniqueViolation,

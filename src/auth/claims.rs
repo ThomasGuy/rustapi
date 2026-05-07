@@ -89,7 +89,7 @@ pub fn encode_token(
         .filter(users::id.eq(user_id))
         .select(users::is_admin)
         .first(&mut conn)
-        .expect("User not found");
+        .map_err(DbError::from)?;
 
     let claims = Claims {
         sub: user_id.to_string(),

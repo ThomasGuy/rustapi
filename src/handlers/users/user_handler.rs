@@ -15,7 +15,7 @@ pub struct UserSignIn {
     password: String,
 }
 
-// POST /api/user
+// POST /user/signup
 #[tracing::instrument(skip(state, payload), fields(user.email = %payload.email))]
 pub async fn register(
     State(state): State<AppState>,
@@ -42,7 +42,7 @@ pub async fn register(
     Ok((StatusCode::CREATED, Json(user)))
 }
 
-// GET /api/user
+// GET /user
 pub async fn all_users(
     State(state): State<AppState>,
     CurrentUser(_user): CurrentUser,

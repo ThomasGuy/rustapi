@@ -117,6 +117,7 @@ async fn get_posts_reponse(
     Ok(response)
 }
 
+// GET /post/all
 #[axum::debug_handler]
 pub async fn all_posts(
     State(state): State<AppState>,
@@ -138,9 +139,11 @@ pub async fn all_posts(
 
     tracing::info!(num_posts=%posts_data.len(), "all_posts success");
     let response = get_posts_reponse(posts_data, &state, user_id).await?;
+
     Ok(Json(response))
 }
 
+// GET /post/user/{username}
 pub async fn get_user_posts(
     State(state): State<AppState>,
     viewer: Result<CurrentUser, AppError>,

@@ -4,10 +4,7 @@ use axum::{
 };
 
 use crate::{
-    handlers::{
-        login::{login, logout, refresh_handler},
-        users::{all_users, register},
-    },
+    handlers::users::{all_users, login, logout, refresh_handler, register},
     utils::AppState,
 };
 

@@ -48,6 +48,7 @@ pub struct ImageRequest {
     image_url_type: ImageUrlType,
 }
 
+// POST /post/create
 pub async fn create_posts(
     CurrentUser(user): CurrentUser,
     State(state): State<AppState>,
@@ -72,6 +73,7 @@ pub async fn create_posts(
     Ok((StatusCode::CREATED, Json(post)))
 }
 
+// DELETE /post/delete/{id}
 pub async fn delete_post(
     State(state): State<AppState>,
     CurrentUser(user): CurrentUser,
@@ -102,7 +104,7 @@ pub async fn delete_post(
     Ok(StatusCode::NO_CONTENT)
 }
 
-// /post/like/:id
+// POST /post/like/{id}
 pub async fn toggle_like(
     State(state): State<AppState>,
     CurrentUser(user): CurrentUser,

@@ -3,9 +3,9 @@ use std::sync::Arc;
 use axum::extract::FromRef;
 use axum_macros::FromRequest;
 
-use super::super::{AppConfig, AppError};
 use crate::auth::TokenKeys;
 use crate::db::DbPool;
+use crate::utils::{AppConfig, AppError};
 
 // 1. Define your shared state
 #[derive(Clone, FromRef)]

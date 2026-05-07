@@ -1,27 +1,19 @@
+mod admin_routes;
 mod post_routes;
 mod user_routes;
-mod admin_routes;
 
-use axum::{
-    extract::DefaultBodyLimit,
-    routing::{get, post},
-    Router,
-};
+use axum::{extract::DefaultBodyLimit, routing::get, Router};
 use tower_http::{limit::RequestBodyLimitLayer, services::ServeDir};
 
-use crate::{
-    handlers::{comments::create_comment, health::health_check},
-    utils::AppState,
-};
+use crate::{handlers::health::health_check, utils::AppState};
 
+use admin_routes::admin_routes;
 use post_routes::post_routes;
 use user_routes::user_routes;
-use admin_routes::admin_routes;
 
 pub fn create_routes() -> Router<AppState> {
     Router::new()
         .route("/health", get(health_check))
-        .route("/comment", post(create_comment))
         .nest("/user", user_routes())
         .nest("/post", post_routes())
         .nest("/admin", admin_routes())

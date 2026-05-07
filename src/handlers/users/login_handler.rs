@@ -1,16 +1,16 @@
-use crate::auth::{encode_token, CurrentUser, TokenType};
-use crate::db::{get_connection, DbConnection};
-use crate::models::users::User;
-use crate::schema::{refresh_tokens, users};
-use crate::utils::{verify_password, AppError, AppJson, AppResult, AppState};
 use axum::http::StatusCode;
 use axum::{extract::State, Json};
-// use chrono::Utc;
 use diesel::dsl::now;
 use diesel::prelude::*;
 use hex;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+
+use crate::auth::{encode_token, CurrentUser, TokenType};
+use crate::db::{get_connection, DbConnection};
+use crate::models::users::User;
+use crate::schema::{refresh_tokens, users};
+use crate::utils::{verify_password, AppError, AppJson, AppResult, AppState};
 
 #[derive(Deserialize)]
 pub struct LoginRequest {
@@ -29,6 +29,7 @@ pub struct AuthResponse {
 }
 
 #[tracing::instrument(skip(state, payload), fields(user.username = %payload.username))]
+// POST /user/login
 pub async fn login(
     State(state): State<AppState>,
     AppJson(payload): AppJson<LoginRequest>,
@@ -84,6 +85,7 @@ pub struct LogoutRequest {
     pub refresh_token: String,
 }
 
+// POST /user.logout
 pub async fn logout(
     State(state): State<AppState>,
     CurrentUser(user): CurrentUser, // Optional: ensures user is authenticated via Access Token

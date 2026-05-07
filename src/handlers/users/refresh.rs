@@ -20,6 +20,7 @@ pub struct RefreshRequest {
     pub refresh_token: String,
 }
 
+// POST /user/refresh
 pub async fn refresh_handler(
     State(state): State<AppState>,
     AppJson(payload): AppJson<RefreshRequest>,

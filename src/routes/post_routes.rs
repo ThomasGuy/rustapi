@@ -5,13 +5,15 @@ use axum::{
 
 use crate::{
     handlers::posts::{
-        all_posts, create_posts, delete_post, get_user_posts, toggle_like, upload_image,
+        all_posts, create_comment, create_posts, delete_post, get_user_posts, toggle_like,
+        upload_image,
     },
     utils::AppState,
 };
 
 pub fn post_routes() -> Router<AppState> {
     Router::new()
+        .route("/comment", post(create_comment))
         .route("/user/{username}", get(get_user_posts))
         .route("/image", post(upload_image))
         .route("/create", post(create_posts))

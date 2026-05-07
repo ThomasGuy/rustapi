@@ -11,6 +11,7 @@ pub struct ImgPath {
     pub filename: String,
 }
 
+// POST /post/image
 pub async fn upload_image(mut multipart: Multipart) -> AppResult<Json<ImgPath>> {
     let mut final_filename = None;
 
