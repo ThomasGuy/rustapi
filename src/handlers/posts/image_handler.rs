@@ -39,7 +39,7 @@ pub async fn upload_image(mut multipart: Multipart) -> AppResult<Json<ImgPath>> 
             .await
             .map_err(DbError::from)?;
 
-        tracing::info!(filename = %unique_name, bytes = file_size, "Image uploaded successfully");
+        tracing::info!(filename=%unique_name, bytes=file_size, "Image uploaded successfully");
         final_filename = Some(unique_name);
     }
 

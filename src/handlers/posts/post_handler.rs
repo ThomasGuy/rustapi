@@ -50,8 +50,8 @@ pub struct ImageRequest {
 
 // POST /post/create
 pub async fn create_posts(
-    CurrentUser(user): CurrentUser,
     State(state): State<AppState>,
+    CurrentUser(user): CurrentUser,
     AppJson(payload): AppJson<ImageRequest>,
 ) -> AppResult<(StatusCode, Json<Post>)> {
     let mut conn: DbConnection = get_connection(&state.pool).await?;

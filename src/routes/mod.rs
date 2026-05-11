@@ -17,7 +17,7 @@ pub fn create_routes() -> Router<AppState> {
         .nest("/user", user_routes())
         .nest("/post", post_routes())
         .nest("/admin", admin_routes())
-        // Disable the default 2MB limit and set a new one (4MB)
+        // Disable the default 2MB limit and set a new one (7MB)
         .layer(DefaultBodyLimit::disable())
         .layer(RequestBodyLimitLayer::new(7 * 1024 * 1024))
         .nest_service("/images", ServeDir::new("images"))
