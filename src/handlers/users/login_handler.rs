@@ -1,4 +1,10 @@
+use crate::auth::{encode_token, TokenType};
+use crate::db::{get_connection, DbConnection};
+use crate::models::users::User;
+use crate::schema::{refresh_tokens, users};
+use crate::utils::{verify_password, AppError, AppJson, AppResult, AppState, Environment};
 use axum::http::StatusCode;
+use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use diesel::dsl::now;
 use diesel::prelude::*;
@@ -6,11 +12,10 @@ use hex;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use crate::auth::{encode_token, CurrentUser, TokenType};
-use crate::db::{get_connection, DbConnection};
-use crate::models::users::User;
-use crate::schema::{refresh_tokens, users};
-use crate::utils::{verify_password, AppError, AppJson, AppResult, AppState};
+use tower_cookies::{
+    cookie::{time::Duration, SameSite},
+    Cookie, Cookies,
+};
 
 #[derive(Deserialize)]
 pub struct LoginRequest {
@@ -24,17 +29,23 @@ pub struct AuthResponse {
     pub access_token: String,
     #[serde(rename = "authTokenType")]
     pub token_type: String,
-    pub refresh_token: String,
     pub user: User,
 }
 
-#[tracing::instrument(skip(state, payload), fields(user.username = %payload.username))]
 // POST /user/login
+#[tracing::instrument(skip(state, cookies, payload), fields(user.username = %payload.username))]
 pub async fn login(
     State(state): State<AppState>,
+    cookies: Cookies,
     AppJson(payload): AppJson<LoginRequest>,
 ) -> AppResult<Json<AuthResponse>> {
     let mut conn: DbConnection = get_connection(&state.pool).await?;
+    let secure_flag = state.config.app_env.requires_secure_cookies();
+    let samesite_policy = if state.config.app_env == Environment::Local {
+        SameSite::Lax // Required so the cookie attaches to fresh cross-port tab loads
+    } else {
+        SameSite::Strict
+    };
 
     // 1. Find user
     let user = users::table
@@ -48,7 +59,6 @@ pub async fn login(
     }
 
     // 2.a update user last_login_at
-    // let now = Utc::now().naive_utc();
     diesel::update(users::table.filter(users::id.eq(user.id)))
         .set(users::last_login_at.eq(now))
         .execute(&mut conn)
@@ -71,55 +81,64 @@ pub async fn login(
         .execute(&mut conn)
         .map_err(|e| AppError::Internal(format!("Failed to store session: {}", e)))?;
 
+    // 4. Build a standard string cookie using tower-cookies' plain API
+    let mut cookie = Cookie::new("refresh_token", refresh_token);
+    cookie.set_path("/");
+    cookie.set_http_only(true);
+    cookie.set_secure(secure_flag); // Must be true on your production VPS
+    cookie.set_same_site(samesite_policy);
+    cookie.set_max_age(Some(Duration::seconds(7 * 24 * 60 * 60)));
+
     tracing::info!(user_id=%user.id, user_name=%user.username, "login success");
+
+    // 5. Inject into cookie manager state in-place (No tuples returned!)
+    cookies.add(cookie);
+
     Ok(Json(AuthResponse {
         access_token,
         token_type: "Bearer".to_string(),
-        refresh_token,
         user,
     }))
-}
-
-#[derive(Deserialize)]
-pub struct LogoutRequest {
-    pub refresh_token: String,
 }
 
 // POST /user.logout
 pub async fn logout(
     State(state): State<AppState>,
-    CurrentUser(user): CurrentUser, // Optional: ensures user is authenticated via Access Token
-    AppJson(payload): AppJson<LogoutRequest>,
-) -> AppResult<StatusCode> {
+    cookies: Cookies,
+) -> AppResult<impl IntoResponse> {
     let mut conn: DbConnection = get_connection(&state.pool).await?;
 
-    // 1. Hash the provided token
-    let token_hash = hex::encode(Sha256::digest(payload.refresh_token.as_bytes()));
+    // 1. If a cookie exists, extract and delete it from the Postgres database
+    if let Some(cookie) = cookies.get("refresh_token") {
+        let token_raw = cookie.value();
 
-    // 2. Remove from DB
-    let deleted = diesel::delete(refresh_tokens::table)
-        .filter(refresh_tokens::token_hash.eq(token_hash))
-        .execute(&mut conn)
-        .map_err(|_| AppError::Internal("Database error".into()))?;
+        // Hash it exactly how you do during login/refresh lookup
+        let hash_bytes = Sha256::digest(token_raw.as_bytes());
+        let token_hash = hex::encode(hash_bytes);
 
-    if deleted == 0 {
-        return Err(AppError::Auth("Session already invalid".into()));
+        // Delete from Diesel schema to invalidate on the server side
+        let _ = diesel::delete(refresh_tokens::table)
+            .filter(refresh_tokens::token_hash.eq(&token_hash))
+            .execute(&mut conn);
     }
-    tracing::info!(user_id=%user.id, user_name=%user.username, "logout success");
+
+    // 2. Build an identical cookie structured to overwrite and immediately expire
+    let secure_flag = state.config.app_env.requires_secure_cookies();
+    let samesite_policy = if state.config.app_env == Environment::Local {
+        SameSite::Lax
+    } else {
+        SameSite::Strict
+    };
+
+    let mut deletion_cookie = Cookie::new("refresh_token", "");
+    deletion_cookie.set_path("/");
+    deletion_cookie.set_http_only(true);
+    deletion_cookie.set_secure(secure_flag);
+    deletion_cookie.set_same_site(samesite_policy);
+    deletion_cookie.set_max_age(Some(tower_cookies::cookie::time::Duration::ZERO)); // Crucial: Evicts the cookie instantly
+
+    // 3. Push to the cookie manager layer
+    cookies.add(deletion_cookie);
+
     Ok(StatusCode::NO_CONTENT)
 }
-
-// pub async fn logout_all_devices(
-//     State(state): State<AppState>,
-//     claims: Claims, // Extracted from Access Token
-// ) -> AppResult<StatusCode> {
-//     let mut conn = get_connection(&state.pool).await?;
-//     let user_id = Uuid::parse_str(&claims.sub).unwrap();
-
-//     diesel::delete(refresh_tokens::table)
-//         .filter(refresh_tokens::user_id.eq(user_id))
-//         .execute(&mut conn)
-//         .map_err(DbError::from)?;
-
-//     Ok(StatusCode::NO_CONTENT)
-// }

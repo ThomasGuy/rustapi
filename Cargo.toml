@@ -21,19 +21,21 @@ uuid = {version = "1", features = ["v4", "serde"]}
 
 # Axum
 async-trait = "0.1"
-axum = {version = "0.8.0", features = ["macros", "multipart"]}
+axum = {version = "0.8", features = ["macros", "multipart"]}
 axum-extra = {version = "0.12", features = ["typed-header", "query", "multipart"]}
 axum-macros = "0.5"
 tokio = {version = "1.52", features = ["full"]}
 
 # Tower Ecosystem
 tower = {version = "0.5", features = ["full"]}
+tower-cookies = "0.11.0"
 tower-http = {version = "0.6", features = ["cors", "trace", "fs", "limit", "timeout"]}
+tower-service = "0.3"
 
 # Authentication
 bcrypt = "0.19"
 hex = "0.4.3"
-jsonwebtoken = {version = "10.3", default-features = false, features = ["rust_crypto"]}
+jsonwebtoken = {version = "10", default-features = false, features = ["rust_crypto"]}
 sha2 = "0.11.0"
 
 # Error Handling
@@ -50,4 +52,3 @@ tracing-subscriber = {version = "0.3", features = ["env-filter", "json"]}
 
 # Testing
 http-body-util = "0.1"
-tower-service = "0.3"

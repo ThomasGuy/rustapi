@@ -6,22 +6,17 @@ pub(crate) mod routes;
 pub(crate) mod schema;
 pub(crate) mod utils;
 
-use axum::{
-    body::Body,
-    http::{
-        header::{AUTHORIZATION, CONTENT_TYPE},
-        Request,
-    },
-};
+use axum::{body::Body, http::Request};
 use jsonwebtoken::{DecodingKey, EncodingKey};
 use std::sync::Arc;
 use tokio::net::TcpListener;
-use tower_http::{cors::CorsLayer, trace::TraceLayer};
+use tower_cookies::CookieManagerLayer;
+use tower_http::trace::TraceLayer;
 use uuid::Uuid;
 
 use auth::claims::TokenKeys;
 use db::{get_connection, init_pool, DbConnection, DbPool};
-use routes::create_routes;
+use routes::{create_routes, generate_cors_layer};
 use utils::{
     workers::{clean_expired_tokens, clean_image_folder, run_migrations},
     AppState,
@@ -49,23 +44,6 @@ async fn main() -> anyhow::Result<()> {
         )
     });
 
-    let cors = CorsLayer::new()
-        .allow_origin(tower_http::cors::Any) // Allows phone, tablet, and PC
-        .allow_methods(tower_http::cors::Any)
-        .allow_headers([AUTHORIZATION, CONTENT_TYPE]);
-
-    // Define the CORS configuration
-    // let cors = CorsLayer::new()
-    //     // Allow specific origin; use Any for development
-    //     .allow_origin(
-    //         "http://localhost:5173"
-    //             .parse::<http::HeaderValue>()
-    //             .unwrap(),
-    //     )
-    //     .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::DELETE])
-    //     .allow_headers([CONTENT_TYPE, AUTHORIZATION])
-    //     .allow_credentials(true);
-
     let config = utils::AppConfig::from_env();
     let pool: DbPool = init_pool(&config)?;
 
@@ -86,10 +64,13 @@ async fn main() -> anyhow::Result<()> {
         public_keys: Arc::new(keys),
     };
 
+    let cors_middleware = generate_cors_layer(state.config.app_env);
+
     let app = create_routes()
         .with_state(state)
         .layer(trace_layer)
-        .layer(cors);
+        .layer(cors_middleware)
+        .layer(CookieManagerLayer::new());
 
     tokio::fs::create_dir_all("./images").await?;
     tokio::spawn(clean_expired_tokens(pool.clone()));
