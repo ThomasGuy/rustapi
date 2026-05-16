@@ -26,12 +26,24 @@ pub struct ImageRequest {
     sanity_asset_id: String,
 }
 
+#[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreatePostResponse {
+    pub id: uuid::Uuid,
+    pub user_id: Uuid,
+    pub caption: Option<String>,
+    pub username: String,
+    pub sanity_asset_id: String, // Becomes "sanityAssetId" in TypeScript
+    pub view_count: i32,
+    pub created_at: chrono::NaiveDateTime,
+}
+
 // POST /post/create
 pub async fn create_posts(
     State(state): State<AppState>,
     CurrentUser(user): CurrentUser,
     AppJson(payload): AppJson<ImageRequest>,
-) -> AppResult<(StatusCode, Json<Post>)> {
+) -> AppResult<(StatusCode, Json<CreatePostResponse>)> {
     let mut conn: DbConnection = get_connection(&state.pool).await?;
 
     let new_post = NewPost {
@@ -47,7 +59,19 @@ pub async fn create_posts(
         .map_err(DbError::from)?; // Converts to DbError, then ? converts to AppError
 
     tracing::info!(user_id=%post.user_id, user_name=%post.username, post_id=%post.id, "new post");
-    Ok((StatusCode::CREATED, Json(post)))
+
+    // 2. Map the database model into your clean web response struct
+    let response_payload = CreatePostResponse {
+        id: post.id,
+        user_id: post.user_id,
+        caption: post.caption,
+        username: post.username,
+        sanity_asset_id: post.sanity_asset_id,
+        view_count: post.view_count,
+        created_at: post.created_at,
+    };
+
+    Ok((StatusCode::CREATED, Json(response_payload)))
 }
 
 // DELETE /post/delete/{id}
