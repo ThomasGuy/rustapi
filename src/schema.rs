@@ -28,9 +28,7 @@ diesel::table! {
         caption -> Nullable<Text>,
         #[max_length = 255]
         username -> Varchar,
-        image_url -> Text,
-        #[max_length = 64]
-        image_url_type -> Varchar,
+        sanity_asset_id -> Text,
         view_count -> Int4,
         created_at -> Timestamp,
         updated_at -> Timestamp,

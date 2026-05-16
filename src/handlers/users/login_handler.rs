@@ -1,8 +1,3 @@
-use crate::auth::{encode_token, TokenType};
-use crate::db::{get_connection, DbConnection};
-use crate::models::users::User;
-use crate::schema::{refresh_tokens, users};
-use crate::utils::{verify_password, AppError, AppJson, AppResult, AppState, Environment};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
@@ -11,11 +6,16 @@ use diesel::prelude::*;
 use hex;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-
 use tower_cookies::{
     cookie::{time::Duration, SameSite},
     Cookie, Cookies,
 };
+
+use crate::auth::{encode_token, TokenType};
+use crate::db::{get_connection, DbConnection};
+use crate::models::users::User;
+use crate::schema::{refresh_tokens, users};
+use crate::utils::{verify_password, AppError, AppJson, AppResult, AppState, Environment};
 
 #[derive(Deserialize)]
 pub struct LoginRequest {
@@ -67,9 +67,9 @@ pub async fn login(
     // 3. Generate tokens (Access & Refresh)
     let keys = &state.public_keys;
     let access_token = encode_token(user.id, keys, 15, TokenType::Access, &state)?; // 15 mins
-    let refresh_token = encode_token(user.id, keys, 10080, TokenType::Refresh, &state)?; // 7 days
+    let refresh_token_raw = encode_token(user.id, keys, 10080, TokenType::Refresh, &state)?; // 7 days
 
-    let hash_bytes = Sha256::digest(refresh_token.as_bytes());
+    let hash_bytes = Sha256::digest(refresh_token_raw.as_bytes());
     let refresh_hash = hex::encode(hash_bytes);
 
     diesel::insert_into(refresh_tokens::table)
@@ -82,12 +82,12 @@ pub async fn login(
         .map_err(|e| AppError::Internal(format!("Failed to store session: {}", e)))?;
 
     // 4. Build a standard string cookie using tower-cookies' plain API
-    let mut cookie = Cookie::new("refresh_token", refresh_token);
+    let mut cookie = Cookie::new("refresh_token", refresh_token_raw);
     cookie.set_path("/");
     cookie.set_http_only(true);
-    cookie.set_secure(secure_flag); // Must be true on your production VPS
+    cookie.set_secure(secure_flag); // Must be true on production VPS
     cookie.set_same_site(samesite_policy);
-    cookie.set_max_age(Some(Duration::seconds(7 * 24 * 60 * 60)));
+    cookie.set_max_age(Some(Duration::seconds(7 * 24 * 60 * 60))); // 7 days matches refresh_token
 
     tracing::info!(user_id=%user.id, user_name=%user.username, "login success");
 
@@ -135,7 +135,7 @@ pub async fn logout(
     deletion_cookie.set_http_only(true);
     deletion_cookie.set_secure(secure_flag);
     deletion_cookie.set_same_site(samesite_policy);
-    deletion_cookie.set_max_age(Some(tower_cookies::cookie::time::Duration::ZERO)); // Crucial: Evicts the cookie instantly
+    deletion_cookie.set_max_age(Some(Duration::ZERO)); // Crucial: Evicts the cookie instantly
 
     // 3. Push to the cookie manager layer
     cookies.add(deletion_cookie);

@@ -20,7 +20,7 @@ pub fn run_migrations(
     Ok(())
 }
 
-pub async fn clean_image_folder(pool: DbPool) {
+pub async fn _clean_image_folder(pool: DbPool) {
     let mut interval = time::interval(Duration::from_secs(3600 * 24)); // Run every day
 
     loop {
@@ -35,7 +35,7 @@ pub async fn clean_image_folder(pool: DbPool) {
         let result = tokio::task::spawn_blocking(move || {
             let mut conn: DbConnection = pool_cloned.get().map_err(DbError::PoolError)?;
             let image_urls = posts::table
-                .select(posts::image_url)
+                .select(posts::sanity_asset_id)
                 .load::<String>(&mut conn)?;
 
             // Convert to HashSet for instant lookups

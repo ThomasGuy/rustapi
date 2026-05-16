@@ -2,7 +2,6 @@ mod admin_routes;
 mod post_routes;
 mod user_routes;
 
-// use axum::http::header::{AUTHORIZATION, CONTENT_TYPE};
 use axum::http::{header::HeaderName, HeaderValue, Method};
 use axum::{extract::DefaultBodyLimit, routing::get, Router};
 use tower_http::cors::{AllowOrigin, CorsLayer};
@@ -39,7 +38,12 @@ pub fn generate_cors_layer(environment: Environment) -> CorsLayer {
     match environment {
         Environment::Local => {
             // Define your permitted local dev origins
-            let allowed_local_origins = ["http://localhost:5173", "http://192.168.1.48:5173"];
+            let allowed_local_origins = [
+                "http://localhost:5173",
+                "http://192.168.1.48:5173",
+                "http://localhost:4173",
+                "http://192.168.1.48:4173",
+            ];
 
             CorsLayer::new()
                 // Use the dynamic closure builder to check incoming requests in real-time

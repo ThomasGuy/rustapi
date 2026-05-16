@@ -18,7 +18,7 @@ use auth::claims::TokenKeys;
 use db::{get_connection, init_pool, DbConnection, DbPool};
 use routes::{create_routes, generate_cors_layer};
 use utils::{
-    workers::{clean_expired_tokens, clean_image_folder, run_migrations},
+    workers::{clean_expired_tokens, run_migrations},
     AppState,
 };
 
@@ -74,7 +74,7 @@ async fn main() -> anyhow::Result<()> {
 
     tokio::fs::create_dir_all("./images").await?;
     tokio::spawn(clean_expired_tokens(pool.clone()));
-    tokio::spawn(clean_image_folder(pool.clone()));
+    // tokio::spawn(clean_image_folder(pool.clone()));
 
     // Start server
     let addr = format!("{}:{}", config.host, config.port);

@@ -10,6 +10,7 @@ use crate::schema::comments;
 use crate::utils::{AppJson, AppResult, AppState, DbError};
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct NewCommentRequest {
     pub post_id: Uuid,
     pub comment: String,

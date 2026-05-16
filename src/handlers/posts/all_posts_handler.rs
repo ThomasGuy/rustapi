@@ -1,16 +1,15 @@
 use std::collections::HashMap;
 
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     Json,
 };
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use diesel::RunQueryDsl;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-// use crate::auth::current_user;
 use crate::auth::CurrentUser;
 use crate::schema::{comments, likes, posts};
 use crate::utils::AppError;
@@ -20,21 +19,29 @@ use crate::{
     utils::{AppResult, AppState, DbError},
 };
 
+#[derive(Debug, Deserialize)]
+pub struct PaginationQuery {
+    pub offset: Option<i64>,
+}
+
+// Global fallback defaults for safe database protection
+const DEFAULT_ALL_LIMIT: i64 = 20;
+const DEFAULT_USER_LIMIT: i64 = 60;
+
 #[derive(Serialize)]
 pub struct UserSummary {
     pub username: String,
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PostResponse {
-    // Frontend Interface
     pub id: Uuid,
-    pub image_url: String,
-    pub image_url_type: String,
+    pub sanity_asset_id: String,
     pub caption: Option<String>,
     pub user_id: Uuid,
     pub user: UserSummary, // Matches TS: user: { username }
-    pub timestamp: NaiveDateTime,
+    pub created_at: NaiveDateTime,
     pub comments: Vec<IComment>, // Matches TS: IComment[]
     pub likes_count: i64,
     pub has_liked: bool,
@@ -42,7 +49,6 @@ pub struct PostResponse {
 
 #[derive(Serialize)]
 pub struct IComment {
-    // Frontend interface
     pub id: Uuid,
     pub comment: String, // Matches TS 'text'
     pub username: String,
@@ -71,7 +77,7 @@ async fn get_posts_reponse(
 
     // 3. Fetch Comments for posts_data
     let all_comments = comments::table
-        .filter(comments::post_id.eq_any(post_ids))
+        .filter(comments::post_id.eq_any(&post_ids))
         .order(comments::created_at.desc())
         .load::<Comment>(&mut conn)
         .map_err(DbError::from)?;
@@ -87,7 +93,7 @@ async fn get_posts_reponse(
         });
     }
 
-    // 3. Map to Frontend Interface
+    // 5. Map to Frontend Interface
     let response = posts_data
         .into_iter()
         .map(|p| {
@@ -99,14 +105,13 @@ async fn get_posts_reponse(
 
             PostResponse {
                 id: p.id,
-                image_url: p.image_url,
-                image_url_type: p.image_url_type,
-                caption: p.caption,
                 user_id: p.user_id,
+                caption: p.caption,
+                sanity_asset_id: p.sanity_asset_id,
                 user: UserSummary {
                     username: p.username,
                 }, // Map 'p.username' to nested object
-                timestamp: p.created_at,
+                created_at: p.created_at,
                 comments: comments_map.remove(&p.id).unwrap_or_default(),
                 likes_count,
                 has_liked,
@@ -121,13 +126,19 @@ async fn get_posts_reponse(
 #[axum::debug_handler]
 pub async fn all_posts(
     State(state): State<AppState>,
+    Query(pagination): Query<PaginationQuery>,
     auth_result: Result<CurrentUser, AppError>,
 ) -> AppResult<Json<Vec<PostResponse>>> {
     let mut conn: DbConnection = get_connection(&state.pool).await?;
 
+    // Fallback: Default to offset 0 if the UI didn't specify one
+    let page_offset = pagination.offset.unwrap_or(0);
+
     // 1. Fetch Posts
     let posts_data = posts::table
         .order(posts::created_at.desc())
+        .limit(DEFAULT_ALL_LIMIT)
+        .offset(page_offset)
         .load::<Post>(&mut conn)
         .map_err(DbError::from)?;
 
@@ -148,13 +159,18 @@ pub async fn get_user_posts(
     State(state): State<AppState>,
     viewer: Result<CurrentUser, AppError>,
     Path(username): Path<String>,
+    Query(pagination): Query<PaginationQuery>,
 ) -> AppResult<Json<Vec<PostResponse>>> {
     let mut conn: DbConnection = get_connection(&state.pool).await?;
+
+    let page_offset = pagination.offset.unwrap_or(0);
 
     // 1. Get the posts for the target user
     let user_posts = posts::table
         .filter(posts::username.eq(&username))
         .order(posts::created_at.desc())
+        .limit(DEFAULT_USER_LIMIT)
+        .offset(page_offset)
         .load::<Post>(&mut conn)
         .map_err(DbError::from)?;
 

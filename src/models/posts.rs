@@ -15,10 +15,7 @@ pub struct Post {
     pub user_id: Uuid,
     pub caption: Option<String>,
     pub username: String,
-    pub image_url: String,
-    pub image_url_type: String,
-    // pub published: bool,
-    // pub published_at: Option<NaiveDateTime>,
+    pub sanity_asset_id: String,
     pub view_count: i32,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
@@ -28,22 +25,14 @@ pub struct Post {
 #[diesel(table_name = posts)]
 pub struct NewPost {
     pub user_id: Uuid,
-    // pub title: String,
     pub caption: Option<String>,
     pub username: String,
-    pub image_url: String,
-    pub image_url_type: String,
-    // pub published: Option<bool>,
-    // pub published_at: Option<NaiveDateTime>,
+    pub sanity_asset_id: String,
 }
 
 #[derive(Debug, AsChangeset, Deserialize)]
 #[diesel(table_name = posts)]
 pub struct UpdatePost {
-    // pub title: Option<String>,
     pub caption: Option<String>,
-    pub image_url: Option<String>,
-    pub image_url_type: Option<String>,
-    // pub published: Option<bool>,
-    // pub published_at: Option<NaiveDateTime>,
+    pub sanity_asset_id: String,
 }

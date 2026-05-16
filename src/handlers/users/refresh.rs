@@ -83,7 +83,7 @@ pub async fn refresh_handler(
     let new_refresh_raw = encode_token(user.id, keys, 10080, TokenType::Refresh, &state)?;
 
     // 6. Hash and Store the NEW refresh token
-    let hash_bytes = Sha256::digest(&new_refresh_raw.as_bytes());
+    let hash_bytes = Sha256::digest(new_refresh_raw.as_bytes());
     let new_refresh_hash = hex::encode(hash_bytes);
 
     diesel::insert_into(refresh_tokens::table)

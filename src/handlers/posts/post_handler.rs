@@ -5,7 +5,7 @@ use axum::{
 };
 use diesel::prelude::*;
 use diesel::RunQueryDsl;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::auth::CurrentUser;
@@ -19,33 +19,11 @@ use crate::{
     utils::{AppError, AppJson, AppResult, AppState, DbError},
 };
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum ImageUrlType {
-    Relative,
-    Absolute,
-}
-
-impl ImageUrlType {
-    pub fn as_str(&self) -> &str {
-        match self {
-            Self::Relative => "relative",
-            Self::Absolute => "absolute",
-        }
-    }
-}
-
-impl From<ImageUrlType> for String {
-    fn from(t: ImageUrlType) -> Self {
-        t.as_str().to_string()
-    }
-}
-
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ImageRequest {
     caption: Option<String>,
-    image_url: String,
-    image_url_type: ImageUrlType,
+    sanity_asset_id: String,
 }
 
 // POST /post/create
@@ -60,8 +38,7 @@ pub async fn create_posts(
         user_id: user.id,
         caption: payload.caption,
         username: user.username,
-        image_url: payload.image_url,
-        image_url_type: payload.image_url_type.into(),
+        sanity_asset_id: payload.sanity_asset_id,
     };
 
     let post = diesel::insert_into(posts::table)
