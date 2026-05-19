@@ -22,6 +22,13 @@ pub fn init_pool(config: &AppConfig) -> Result<DbPool, DbError> {
 }
 
 // Helper to get a connection from the pool
+// Update your get_connection helper to handle thread offloading
 pub async fn get_connection(pool: &DbPool) -> Result<DbConnection, DbError> {
-    pool.get().map_err(DbError::PoolError)
+    let pool: DbPool = pool.clone();
+
+    // Offload the blocking r2d2 pool grab to a dedicated background worker thread
+    tokio::task::spawn_blocking(move || pool.get().map_err(DbError::PoolError))
+        .await
+        .map_err(DbError::JoinError)?
+    // Handle join handle errors safely
 }

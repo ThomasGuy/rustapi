@@ -33,14 +33,19 @@ where
 
         // 2. Get DB pool
         let pool: DbPool = DbPool::from_ref(state);
-        let mut conn: DbConnection = get_connection(&pool).await?;
 
-        // 3. Fetch user from Diesel
-        let user = users::table
-            // Diesel handles the Uuid type comparison
-            .filter(users::id.eq(user_uuid))
-            .first::<User>(&mut conn)
-            .map_err(|_| AppError::Auth("User not found".into()))?;
+        // FIX: Wrap the Diesel query loop inside a scoped block. The r2d2 get connection
+        // from pool is syncriuos i.e. blocking, so put inside this scoped block { }
+        let user = {
+            let mut conn: DbConnection = get_connection(&pool).await?;
+
+            // 3. Fetch user from Diesel
+            users::table
+                // Diesel handles the Uuid type comparison
+                .filter(users::id.eq(user_uuid))
+                .first::<User>(&mut conn)
+                .map_err(|_| AppError::Auth("User not found".into()))?
+        };
 
         Ok(CurrentUser(user))
     }

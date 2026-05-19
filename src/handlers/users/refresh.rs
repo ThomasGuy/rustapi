@@ -101,7 +101,7 @@ pub async fn refresh_handler(
     new_cookie.set_http_only(true);
     new_cookie.set_secure(secure_flag); // Ensure true for production VPS
     new_cookie.set_same_site(samesite_policy);
-    new_cookie.set_max_age(Some(Duration::seconds(7 * 24 * 60 * 60)));
+    new_cookie.set_max_age(Some(Duration::days(7)));
 
     cookies.add(new_cookie); // Overwrites old browser cookie instantly
 

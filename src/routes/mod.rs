@@ -33,6 +33,7 @@ pub fn generate_cors_layer(environment: Environment) -> CorsLayer {
         HeaderName::from_static("authorization"),
         HeaderName::from_static("content-type"),
         HeaderName::from_static("accept"),
+        HeaderName::from_static("cookie"),
     ];
 
     match environment {

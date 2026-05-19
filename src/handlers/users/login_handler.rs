@@ -87,7 +87,7 @@ pub async fn login(
     cookie.set_http_only(true);
     cookie.set_secure(secure_flag); // Must be true on production VPS
     cookie.set_same_site(samesite_policy);
-    cookie.set_max_age(Some(Duration::seconds(7 * 24 * 60 * 60))); // 7 days matches refresh_token
+    cookie.set_max_age(Some(Duration::days(7))); // 7 days matches refresh_token
 
     tracing::info!(user_id=%user.id, user_name=%user.username, "login success");
 
