@@ -8,6 +8,7 @@ use super::posts::Post;
 
 #[derive(Debug, Queryable, Selectable, Serialize, Identifiable, Associations, PartialEq)]
 #[diesel(belongs_to(Post))]
+#[serde(rename_all = "camelCase")]
 #[diesel(table_name = comments)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Comment {
@@ -21,6 +22,7 @@ pub struct Comment {
 }
 
 #[derive(Debug, Insertable, Deserialize)]
+// #[serde(rename_all = "camelCase")]
 #[diesel(table_name = comments)]
 pub struct NewComment {
     pub post_id: Uuid,
