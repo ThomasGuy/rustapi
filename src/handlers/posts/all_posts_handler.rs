@@ -60,6 +60,11 @@ async fn get_posts_reponse(
     state: &AppState,
     current_user_id: Uuid,
 ) -> AppResult<Vec<PostResponse>> {
+    // This stops Diesel from executing invalid empty SQL operations.
+    if posts_data.is_empty() {
+        return Ok(Vec::new());
+    }
+
     let mut conn: DbConnection = get_connection(&state.pool).await?;
     let post_ids: Vec<Uuid> = posts_data.iter().map(|p| p.id).collect();
 
