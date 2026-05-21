@@ -99,7 +99,7 @@ pub async fn refresh_handler(
     let mut new_cookie = Cookie::new("refresh_token", new_refresh_raw);
     new_cookie.set_path("/");
     new_cookie.set_http_only(true);
-    new_cookie.set_secure(false); // Ensure true for production VPS
+    new_cookie.set_secure(secure_flag); // Ensure true for production VPS
     new_cookie.set_same_site(samesite_policy);
     new_cookie.set_max_age(Some(Duration::days(7)));
 
