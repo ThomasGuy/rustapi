@@ -44,12 +44,6 @@ async fn main() -> anyhow::Result<()> {
     let config = utils::AppConfig::from_env();
     let pool: DbPool = init_pool(&config)?;
 
-    // run migrations
-    // {
-    //     let mut conn: DbConnection = get_connection(&pool).await?;
-    //     run_migrations(&mut conn).map_err(|err| anyhow::anyhow!("Migrations failed: {}", err))?;
-    // }
-
     let keys = TokenKeys {
         encoding_key: EncodingKey::from_secret(config.secret_key.as_bytes()),
         decoding_key: DecodingKey::from_secret(config.secret_key.as_bytes()),

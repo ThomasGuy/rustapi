@@ -1,5 +1,5 @@
 use diesel::prelude::*;
-use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+
 use std::{collections::HashSet, fs, time::Duration};
 use tokio::time;
 use tracing::{error, info, info_span};
@@ -8,17 +8,6 @@ use uuid::Uuid;
 use crate::db::{DbConnection, DbPool};
 use crate::schema::posts;
 use crate::utils::DbError;
-
-// This macro reads your migrations at compile time
-pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
-
-pub fn run_migrations(
-    conn: &mut impl MigrationHarness<diesel::pg::Pg>,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
-    // This will run all pending migrations
-    conn.run_pending_migrations(MIGRATIONS)?;
-    Ok(())
-}
 
 pub async fn _clean_image_folder(pool: DbPool) {
     let mut interval = time::interval(Duration::from_secs(3600 * 24)); // Run every day

@@ -3,9 +3,9 @@ mod post_routes;
 mod user_routes;
 
 use axum::http::{header::HeaderName, HeaderValue, Method};
-use axum::{extract::DefaultBodyLimit, routing::get, Router};
+use axum::{routing::get, Router};
 use tower_http::cors::{AllowOrigin, CorsLayer};
-use tower_http::{limit::RequestBodyLimitLayer, services::ServeDir};
+// use tower_http::{limit::RequestBodyLimitLayer, services::ServeDir};
 
 use crate::{
     handlers::health::health_check,
@@ -22,10 +22,10 @@ pub fn create_routes() -> Router<AppState> {
         .nest("/user", user_routes())
         .nest("/post", post_routes())
         .nest("/admin", admin_routes())
-        // Disable the default 2MB limit and set a new one (7MB)
-        .layer(DefaultBodyLimit::disable())
-        .layer(RequestBodyLimitLayer::new(7 * 1024 * 1024))
-        .nest_service("/images", ServeDir::new("images"))
+    // Disable the default 2MB limit and set a new one (7MB)
+    // .layer(DefaultBodyLimit::disable())
+    // .layer(RequestBodyLimitLayer::new(7 * 1024 * 1024))
+    // .nest_service("/images", ServeDir::new("images"))
 }
 
 pub fn generate_cors_layer(environment: Environment) -> CorsLayer {

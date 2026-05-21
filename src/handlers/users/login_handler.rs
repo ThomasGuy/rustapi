@@ -133,7 +133,7 @@ pub async fn logout(
     let mut deletion_cookie = Cookie::new("refresh_token", "");
     deletion_cookie.set_path("/");
     deletion_cookie.set_http_only(true);
-    deletion_cookie.set_secure(false);
+    deletion_cookie.set_secure(secure_flag);
     deletion_cookie.set_same_site(samesite_policy);
     deletion_cookie.set_max_age(Some(Duration::ZERO)); // Crucial: Evicts the cookie instantly
 
