@@ -15,12 +15,9 @@ use tower_http::trace::TraceLayer;
 use uuid::Uuid;
 
 use auth::claims::TokenKeys;
-use db::{get_connection, init_pool, DbConnection, DbPool};
+use db::{init_pool, DbPool};
 use routes::{create_routes, generate_cors_layer};
-use utils::{
-    workers::{clean_expired_tokens, run_migrations},
-    AppState,
-};
+use utils::{workers::clean_expired_tokens, AppState};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -48,10 +45,10 @@ async fn main() -> anyhow::Result<()> {
     let pool: DbPool = init_pool(&config)?;
 
     // run migrations
-    {
-        let mut conn: DbConnection = get_connection(&pool).await?;
-        run_migrations(&mut conn).map_err(|err| anyhow::anyhow!("Migrations failed: {}", err))?;
-    }
+    // {
+    //     let mut conn: DbConnection = get_connection(&pool).await?;
+    //     run_migrations(&mut conn).map_err(|err| anyhow::anyhow!("Migrations failed: {}", err))?;
+    // }
 
     let keys = TokenKeys {
         encoding_key: EncodingKey::from_secret(config.secret_key.as_bytes()),
@@ -72,7 +69,7 @@ async fn main() -> anyhow::Result<()> {
         .layer(cors_middleware)
         .layer(CookieManagerLayer::new());
 
-    tokio::fs::create_dir_all("./images").await?;
+    // tokio::fs::create_dir_all("./images").await?;
     tokio::spawn(clean_expired_tokens(pool.clone()));
     // tokio::spawn(clean_image_folder(pool.clone()));
 
