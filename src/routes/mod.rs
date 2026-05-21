@@ -68,7 +68,7 @@ pub fn generate_cors_layer(environment: Environment) -> CorsLayer {
         }
         Environment::Production => CorsLayer::new()
             .allow_origin(AllowOrigin::exact(HeaderValue::from_static(
-                "https://yourfrontend.com",
+                "http://213.171.209.232",
             )))
             .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
             .allow_headers(allowed_headers)
