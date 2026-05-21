@@ -66,12 +66,24 @@ pub fn generate_cors_layer(environment: Environment) -> CorsLayer {
                 .allow_headers(allowed_headers)
                 .allow_credentials(true) // Crucial for cookie transmissions
         }
-        Environment::Production => CorsLayer::new()
-            .allow_origin(AllowOrigin::exact(HeaderValue::from_static(
-                "http://213.171.209.232",
-            )))
-            .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
-            .allow_headers(allowed_headers)
-            .allow_credentials(true),
+        Environment::Production => {
+            // Define your permitted production web layout entry points
+            let allowed_production_origins =
+                ["http://213.171.209.232", "http://213.171.209.232:80"];
+
+            CorsLayer::new()
+                // Use a dynamic predicate closure to validate the incoming origin in real-time
+                .allow_origin(AllowOrigin::predicate(
+                    move |origin: &HeaderValue, _request_parts| {
+                        if let Ok(origin_str) = origin.to_str() {
+                            return allowed_production_origins.contains(&origin_str);
+                        }
+                        false
+                    },
+                ))
+                .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
+                .allow_headers(allowed_headers)
+                .allow_credentials(true)
+        }
     }
 }
