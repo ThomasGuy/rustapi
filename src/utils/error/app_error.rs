@@ -38,10 +38,19 @@ pub enum AppError {
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         match self {
+            // AppError::Db(db_err) => {
+            //     // Log database failures as errors on your VPS logs
+            //     error!(target: "server::database", "Database exception encountered: {:?}", db_err);
+            //     db_err.into_response()
+            // }
             AppError::Db(db_err) => {
-                // Log database failures as errors on your VPS logs
-                error!(target: "server::database", "Database exception encountered: {:?}", db_err);
-                db_err.into_response()
+                // 👈 TEMPORARY DIAGNOSTIC TRICK: Return the raw database message text to the UI
+                let status = StatusCode::INTERNAL_SERVER_ERROR;
+                let body = Json(serde_json::json!({
+                    "error": format!("Database Error string: {:?}", db_err),
+                    "status": 500
+                }));
+                (status, body).into_response()
             }
 
             other_errors => {
