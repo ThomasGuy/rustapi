@@ -6,7 +6,6 @@ version = "0.1.0"
 [dependencies]
 # database ORM
 diesel = {version = "2", features = ["postgres", "r2d2", "chrono", "uuid"]}
-diesel_migrations = {version = "2", features = ["postgres"]}
 
 # Environment variable management
 dotenvy = "0.15"

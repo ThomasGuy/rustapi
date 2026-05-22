@@ -68,8 +68,12 @@ pub fn generate_cors_layer(environment: Environment) -> CorsLayer {
         }
         Environment::Production => {
             // Define your permitted production web layout entry points
-            let allowed_production_origins =
-                ["http://213.171.209.232", "http://213.171.209.232:80"];
+            let allowed_production_origins = [
+                "http://213.171.209.232",
+                // "http://213.171.209.232:80",
+                "http://twguy.co.uk",
+                "https://twguy.co.uk",
+            ];
 
             CorsLayer::new()
                 // Use a dynamic predicate closure to validate the incoming origin in real-time
@@ -81,7 +85,13 @@ pub fn generate_cors_layer(environment: Environment) -> CorsLayer {
                         false
                     },
                 ))
-                .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
+                .allow_methods([
+                    Method::GET,
+                    Method::POST,
+                    Method::PUT,
+                    Method::DELETE,
+                    Method::OPTIONS,
+                ])
                 .allow_headers(allowed_headers)
                 .allow_credentials(true)
         }
