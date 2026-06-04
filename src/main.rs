@@ -63,9 +63,7 @@ async fn main() -> anyhow::Result<()> {
         .layer(cors_middleware)
         .layer(CookieManagerLayer::new());
 
-    // tokio::fs::create_dir_all("./images").await?;
     tokio::spawn(clean_expired_tokens(pool.clone()));
-    // tokio::spawn(clean_image_folder(pool.clone()));
 
     // Start server
     let addr = format!("{}:{}", config.host, config.port);

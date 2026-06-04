@@ -5,27 +5,18 @@ mod user_routes;
 use axum::http::{header::HeaderName, HeaderValue, Method};
 use axum::{routing::get, Router};
 use tower_http::cors::{AllowOrigin, CorsLayer};
-// use tower_http::{limit::RequestBodyLimitLayer, services::ServeDir};
 
 use crate::{
     handlers::health::health_check,
     utils::{AppState, Environment},
 };
 
-use admin_routes::admin_routes;
-use post_routes::post_routes;
-use user_routes::user_routes;
-
 pub fn create_routes() -> Router<AppState> {
     Router::new()
         .route("/health", get(health_check))
-        .nest("/user", user_routes())
-        .nest("/post", post_routes())
-        .nest("/admin", admin_routes())
-    // Disable the default 2MB limit and set a new one (7MB)
-    // .layer(DefaultBodyLimit::disable())
-    // .layer(RequestBodyLimitLayer::new(7 * 1024 * 1024))
-    // .nest_service("/images", ServeDir::new("images"))
+        .nest("/user", user_routes::user_routes())
+        .nest("/post", post_routes::post_routes())
+        .nest("/admin", admin_routes::admin_routes())
 }
 
 pub fn generate_cors_layer(environment: Environment) -> CorsLayer {
@@ -41,9 +32,11 @@ pub fn generate_cors_layer(environment: Environment) -> CorsLayer {
             // Define your permitted local dev origins
             let allowed_local_origins = [
                 "http://localhost:5173",
-                "http://192.168.1.48:5173",
+                "http://192.168.1.9:5173",
                 "http://localhost:4173",
-                "http://192.168.1.48:4173",
+                "http://192.168.1.9:4173",
+                "http://10.255.255.254:5173",
+                "http://172.22.143.216:5173",
             ];
 
             CorsLayer::new()
@@ -70,7 +63,6 @@ pub fn generate_cors_layer(environment: Environment) -> CorsLayer {
             // Define your permitted production web layout entry points
             let allowed_production_origins = [
                 "http://213.171.209.232",
-                // "http://213.171.209.232:80",
                 "http://twguy.co.uk",
                 "https://twguy.co.uk",
             ];
