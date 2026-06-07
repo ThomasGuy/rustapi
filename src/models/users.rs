@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Debug, Queryable, Selectable, Serialize, Identifiable, PartialEq)]
-#[serde(rename_all = "camelCase")] // <-- ADD THIS: Converts display_name, is_active, etc. to camelCase for TS
+#[serde(rename_all = "camelCase")] // <-- ADD THIS: Converts display_name, to camelCase for TS
 #[diesel(table_name = users)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct User {

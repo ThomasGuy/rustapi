@@ -1,1 +1,1 @@
-A rust server: axum/diesel/postgres 
+A rust server: axum/diesel/postgres
