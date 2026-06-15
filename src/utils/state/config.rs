@@ -1,6 +1,15 @@
 use std::env;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize)]
+pub struct SanityConfig {
+    #[serde(rename = "projectId")]
+    project_id: String,
+    dataset: String,
+    #[serde(rename = "writeToken")]
+    write_token: String,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 pub enum Environment {
@@ -27,6 +36,7 @@ pub struct AppConfig {
     pub port: u16,
     pub(crate) secret_key: String,
     pub app_env: Environment,
+    pub sanity_config: SanityConfig,
 }
 
 impl AppConfig {
@@ -47,6 +57,11 @@ impl AppConfig {
             secret_key: env::var("SECRET_KEY")
                 .unwrap_or_else(|_| "twguy_kjf#hask~dfh^".to_string()),
             app_env: environment,
+            sanity_config: SanityConfig {
+                project_id: env::var("SANITY_PROJECT_ID").unwrap_or("nil".to_string()),
+                dataset: env::var("SANITY_DATASET").unwrap_or("nil".to_string()),
+                write_token: env::var("SANITY_WRITE_TOKEN").unwrap_or("nil".to_string()),
+            },
         }
     }
 }
