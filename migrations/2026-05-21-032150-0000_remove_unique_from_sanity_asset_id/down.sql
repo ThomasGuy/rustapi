@@ -1,3 +1,0 @@
--- This file should undo anything in `up.sql`
--- This migration cannot be safely reverted.
--- Re-applying the unique constraint would fail if duplicate asset IDs exist in the table.

@@ -1,7 +1,7 @@
 [package]
 edition = "2021"
 name = "rustapi"
-version = "0.1.0"
+version = "0.2.0"
 
 [dependencies]
 # database ORM
@@ -26,7 +26,7 @@ tokio = {version = "1.52", features = ["full"]}
 
 # Tower Ecosystem
 tower = {version = "0.5", features = ["full"]}
-tower-cookies = "0.11.0"
+tower-cookies = "0.11"
 tower-http = {version = "0.6", features = ["cors", "trace", "fs", "limit", "timeout"]}
 tower-service = "0.3"
 
@@ -34,7 +34,7 @@ tower-service = "0.3"
 bcrypt = "0.19"
 hex = "0.4.3"
 jsonwebtoken = {version = "10", default-features = false, features = ["rust_crypto"]}
-sha2 = "0.11.0"
+sha2 = "0.11"
 
 # Error Handling
 anyhow = "1.0"
