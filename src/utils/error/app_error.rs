@@ -25,6 +25,9 @@ pub enum AppError {
     #[error("Multipart malformed: {0}")]
     MultipartError(#[from] axum::extract::multipart::MultipartError),
 
+    #[error("Outbound API error: {0}")]
+    ReqwestError(#[from] reqwest::Error),
+
     #[error("JWT error: {0}")]
     JwtError(#[from] jsonwebtoken::errors::Error),
 
@@ -92,6 +95,14 @@ impl IntoResponse for AppError {
                         (
                             StatusCode::BAD_REQUEST,
                             format!("Malformed response: {err}"),
+                        )
+                    }
+
+                    AppError::ReqwestError(err) => {
+                        error!(target: "server::outbound", "Outbound request to Sanity CMS failed: {:?}", err);
+                        (
+                            StatusCode::BAD_GATEWAY,
+                            "Failed to communicate with the media storage provider".into(),
                         )
                     }
 

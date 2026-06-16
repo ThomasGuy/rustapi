@@ -5,10 +5,10 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize)]
 pub struct SanityConfig {
     #[serde(rename = "projectId")]
-    project_id: String,
-    dataset: String,
+    pub project_id: String,
+    pub dataset: String,
     #[serde(rename = "writeToken")]
-    write_token: String,
+    pub write_token: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]

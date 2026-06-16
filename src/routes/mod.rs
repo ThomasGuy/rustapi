@@ -2,9 +2,11 @@ mod admin_routes;
 mod post_routes;
 mod user_routes;
 
+use axum::extract::DefaultBodyLimit;
 use axum::http::{header::HeaderName, HeaderValue, Method};
 use axum::{routing::get, Router};
 use tower_http::cors::{AllowOrigin, CorsLayer};
+use tower_http::limit::RequestBodyLimitLayer;
 
 use crate::{
     handlers::health::health_check,
@@ -17,6 +19,9 @@ pub fn create_routes() -> Router<AppState> {
         .nest("/user", user_routes::user_routes())
         .nest("/post", post_routes::post_routes())
         .nest("/admin", admin_routes::admin_routes())
+        .layer(DefaultBodyLimit::disable())
+        // 2. Enforce a safe custom cap instead (e.g., 10 Megabytes)
+        .layer(RequestBodyLimitLayer::new(7 * 1024 * 1024))
 }
 
 pub fn generate_cors_layer(environment: Environment) -> CorsLayer {
