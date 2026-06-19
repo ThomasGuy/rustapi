@@ -5,7 +5,7 @@ version = "0.2.0"
 
 [dependencies]
 # database ORM
-diesel = {version = "2", features = ["postgres", "r2d2", "chrono", "uuid"]}
+diesel = {version = "2", features = ["postgres", "r2d2", "chrono", "uuid", "serde_json"]}
 
 # Environment variable management
 dotenvy = "0.15"

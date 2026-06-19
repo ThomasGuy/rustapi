@@ -28,10 +28,10 @@ diesel::table! {
         caption -> Nullable<Text>,
         #[max_length = 255]
         username -> Varchar,
-        sanity_asset_id -> Text,
         view_count -> Int4,
         created_at -> Timestamp,
         updated_at -> Timestamp,
+        sanity_image -> Jsonb,
     }
 }
 

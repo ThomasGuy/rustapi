@@ -1,11 +1,17 @@
+use std::io::Write;
+
 use axum::{
     extract::{Path, State},
     http::StatusCode,
     Json,
 };
+use diesel::deserialize::{self, FromSql};
+use diesel::pg::Pg;
 use diesel::prelude::*;
-use diesel::RunQueryDsl;
-use serde::Deserialize;
+use diesel::serialize::{self, IsNull, Output, ToSql};
+use diesel::sql_types::Jsonb;
+use diesel::{backend::Backend, RunQueryDsl};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::auth::CurrentUser;
@@ -19,21 +25,83 @@ use crate::{
     utils::{AppError, AppJson, AppResult, AppState, DbError},
 };
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct SanityAssetRef {
+    // 🌟 Bridges incoming JSON "_ref" (or database "reference") to this Rust property
+    #[serde(alias = "_ref", rename(serialize = "_ref", deserialize = "reference"))]
+    pub reference: String,
+
+    // 🌟 Bridges incoming JSON "_type" (or database "asset_type") to this Rust property
+    #[serde(
+        alias = "_type",
+        rename(serialize = "_type", deserialize = "asset_type")
+    )]
+    pub asset_type: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct SanityHotspot {
+    pub x: f64,
+    pub y: f64,
+    pub height: f64,
+    pub width: f64,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct SanityCrop {
+    pub top: f64,
+    pub bottom: f64,
+    pub left: f64,
+    pub right: f64,
+}
+
+#[derive(
+    Serialize, Deserialize, Debug, Clone, PartialEq, diesel::FromSqlRow, diesel::AsExpression,
+)]
+#[diesel(sql_type = diesel::sql_types::Jsonb)]
+pub struct SanityImage {
+    pub asset: SanityAssetRef,
+    pub hotspot: Option<SanityHotspot>,
+    pub crop: Option<SanityCrop>,
+}
+
+impl FromSql<Jsonb, Pg> for SanityImage {
+    fn from_sql(bytes: <Pg as Backend>::RawValue<'_>) -> deserialize::Result<Self> {
+        let value = <serde_json::Value as FromSql<Jsonb, Pg>>::from_sql(bytes)?;
+        let image: SanityImage = serde_json::from_value(value)?;
+        Ok(image)
+    }
+}
+
+impl ToSql<Jsonb, Pg> for SanityImage {
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
+        // 1. Write the mandatory Postgres JSONB version header (currently 1)
+        out.write_all(&[1])?;
+        // 2. Stream your struct bytes directly into the output network buffer
+        serde_json::to_writer(out, self)?;
+        Ok(IsNull::No)
+    }
+}
+
+// 🌟 Updated: Structural transition to match the full payload contract
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ImageRequest {
-    caption: Option<String>,
-    sanity_asset_id: String,
+    pub caption: Option<String>,
+    pub sanity_image: SanityImage, // Accept full layout constraints from UI
 }
 
-#[derive(Debug, serde::Serialize)]
+// 🌟 Updated: Echo the full structure back out to the frontend application
+#[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreatePostResponse {
     pub id: uuid::Uuid,
-    pub user_id: Uuid,
+    pub user_id: uuid::Uuid,
     pub caption: Option<String>,
     pub username: String,
-    pub sanity_asset_id: String, // Becomes "sanityAssetId" in TypeScript
+    pub sanity_image: SanityImage, // Becomes "sanityImage" object array in TypeScript
     pub view_count: i32,
     pub created_at: chrono::NaiveDateTime,
 }
@@ -50,11 +118,12 @@ pub async fn create_posts(
         user_id: user.id,
         caption: payload.caption,
         username: user.username,
-        sanity_asset_id: payload.sanity_asset_id,
+        sanity_image: payload.sanity_image,
     };
 
     let post = diesel::insert_into(posts::table)
         .values(&new_post)
+        .returning(Post::as_select())
         .get_result::<Post>(&mut conn)
         .map_err(DbError::from)?; // Converts to DbError, then ? converts to AppError
 
@@ -66,7 +135,7 @@ pub async fn create_posts(
         user_id: post.user_id,
         caption: post.caption,
         username: post.username,
-        sanity_asset_id: post.sanity_asset_id,
+        sanity_image: post.sanity_image,
         view_count: post.view_count,
         created_at: post.created_at,
     };

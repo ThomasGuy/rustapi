@@ -10,9 +10,9 @@ use diesel::RunQueryDsl;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::auth::CurrentUser;
 use crate::schema::{comments, likes, posts};
 use crate::utils::AppError;
+use crate::{auth::CurrentUser, handlers::posts::post_handler::SanityImage};
 use crate::{
     db::{get_connection, DbConnection},
     models::{comments::Comment, likes::Like, posts::Post},
@@ -37,7 +37,7 @@ pub struct UserSummary {
 #[serde(rename_all = "camelCase")]
 pub struct PostResponse {
     pub id: Uuid,
-    pub sanity_asset_id: String,
+    pub sanity_image: SanityImage,
     pub caption: Option<String>,
     pub user_id: Uuid,
     pub user: UserSummary, // Matches TS: user: { username }
@@ -112,7 +112,7 @@ async fn get_posts_reponse(
                 id: p.id,
                 user_id: p.user_id,
                 caption: p.caption,
-                sanity_asset_id: p.sanity_asset_id,
+                sanity_image: p.sanity_image,
                 user: UserSummary {
                     username: p.username,
                 }, // Map 'p.username' to nested object
@@ -144,6 +144,7 @@ pub async fn all_posts(
         .order(posts::created_at.desc())
         .limit(DEFAULT_ALL_LIMIT)
         .offset(page_offset)
+        .select(Post::as_select())
         .load::<Post>(&mut conn)
         .map_err(DbError::from)?;
 
@@ -176,6 +177,7 @@ pub async fn get_user_posts(
         .order(posts::created_at.desc())
         .limit(DEFAULT_USER_LIMIT)
         .offset(page_offset)
+        .select(Post::as_select())
         .load::<Post>(&mut conn)
         .map_err(DbError::from)?;
 

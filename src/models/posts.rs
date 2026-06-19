@@ -1,4 +1,4 @@
-use crate::schema::posts;
+use crate::{handlers::posts::post_handler::SanityImage, schema::posts};
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -15,7 +15,7 @@ pub struct Post {
     pub user_id: Uuid,
     pub caption: Option<String>,
     pub username: String,
-    pub sanity_asset_id: String,
+    pub sanity_image: SanityImage,
     pub view_count: i32,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
@@ -27,12 +27,12 @@ pub struct NewPost {
     pub user_id: Uuid,
     pub caption: Option<String>,
     pub username: String,
-    pub sanity_asset_id: String,
+    pub sanity_image: SanityImage,
 }
 
 #[derive(Debug, AsChangeset, Deserialize)]
 #[diesel(table_name = posts)]
 pub struct UpdatePost {
     pub caption: Option<String>,
-    pub sanity_asset_id: String,
+    pub sanity_image: SanityImage,
 }
