@@ -30,5 +30,4 @@ pub async fn get_connection(pool: &DbPool) -> Result<DbConnection, DbError> {
     tokio::task::spawn_blocking(move || pool.get().map_err(DbError::PoolError))
         .await
         .map_err(DbError::JoinError)?
-    // Handle join handle errors safely
 }

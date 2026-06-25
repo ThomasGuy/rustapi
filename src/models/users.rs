@@ -34,6 +34,20 @@ pub struct NewUser {
     pub is_admin: bool,
 }
 
+// Dedicated payload for updating profile details via PATCH request
+#[derive(Debug, Serialize, Deserialize, AsChangeset)]
+#[diesel(table_name = users)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateUserPayload {
+    pub display_name: Option<String>,
+    pub bio: Option<String>,
+    pub avatar_url: Option<String>,
+    // Ignored by incoming JSON and outgoing JSON responses
+    #[serde(skip_deserializing, skip_serializing)]
+    // Always compute this programmatically on the server
+    pub updated_at: Option<NaiveDateTime>,
+}
+
 #[derive(Debug, Insertable, Serialize, Deserialize)]
 #[diesel(table_name = users)]
 pub struct DisplayUser {

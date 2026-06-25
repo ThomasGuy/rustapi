@@ -11,11 +11,11 @@ use tower_cookies::{
     Cookie, Cookies,
 };
 
-use crate::auth::{encode_token, TokenType};
+use crate::auth::{encode_token, CurrentUser, TokenType};
 use crate::db::{get_connection, DbConnection};
-use crate::models::users::User;
+use crate::models::users::{UpdateUserPayload, User};
 use crate::schema::{refresh_tokens, users};
-use crate::utils::{verify_password, AppError, AppJson, AppResult, AppState, Environment};
+use crate::utils::{verify_password, AppError, AppJson, AppResult, AppState, DbError, Environment};
 
 #[derive(Deserialize)]
 pub struct LoginRequest {
@@ -141,4 +141,102 @@ pub async fn logout(
     cookies.add(deletion_cookie);
 
     Ok(StatusCode::NO_CONTENT)
+}
+
+// PATCH /user/update
+#[tracing::instrument(skip(state, current_user, payload), fields(user.id = %current_user.id))]
+pub async fn update_profile(
+    State(state): State<AppState>,
+    CurrentUser(current_user): CurrentUser,
+    AppJson(mut payload): AppJson<UpdateUserPayload>,
+) -> AppResult<Json<UpdateUserPayload>> {
+    let current_time = chrono::Utc::now().naive_utc();
+    payload.updated_at = Some(current_time);
+    let sanity = &state.config.sanity_config;
+    let mut conn: DbConnection = get_connection(&state.pool).await?;
+
+    let old_asset_ids: Vec<Option<String>> = users::table
+        .filter(users::id.eq(current_user.id))
+        .select(users::avatar_url)
+        .load::<Option<String>>(&mut conn)
+        .map_err(DbError::from)?;
+
+    let old_asset_id = old_asset_ids.first().cloned().flatten();
+
+    // 2. Wrap the blocking Diesel update query inside a scoped code block
+    {
+        let mut conn: DbConnection = get_connection(&state.pool).await?;
+
+        diesel::update(users::table.filter(users::id.eq(current_user.id)))
+            .set(&payload)
+            .execute(&mut conn) // Light database operation, returns row count instead of records
+            .map_err(DbError::DatabaseError)?;
+    };
+
+    tracing::info!(user_id = %current_user.id, "Profile updated successfully");
+
+    // 🚀 DIAGNOSTIC IMPROVEMENT: Trace out what values are actually sitting here
+    tracing::info!(
+        "Purge Check -> Old ID in DB: {:?}, New Payload ID: {:?}",
+        old_asset_id,
+        payload.avatar_url
+    );
+
+    // 🚀 Hook up Sanity background task if the asset changed and an old one exists
+    if let Some(old_id) = old_asset_id {
+        // Only trigger if the payload actually changed the avatar string
+        if Some(&old_id) != payload.avatar_url.as_ref() {
+            let project_id = sanity.project_id.clone();
+            let dataset = sanity.dataset.clone();
+            let token = sanity.write_token.clone();
+
+            tokio::spawn(async move {
+                let client = reqwest::Client::new();
+                let url = format!(
+                    "https://{}.api.sanity.io/v2026-06-25/data/mutate/{}",
+                    project_id, dataset
+                );
+
+                let mutation_payload = serde_json::json!({
+                    "mutations": [{ "delete": { "id": old_id } }]
+                });
+
+                match client
+                    .post(&url)
+                    .header("Authorization", format!("Bearer {}", token))
+                    .json(&mutation_payload)
+                    .send()
+                    .await
+                {
+                    Ok(res) => {
+                        let status = res.status();
+                        // Read body text to see what Sanity is complaining about if it breaks
+                        let body_text = res.text().await.unwrap_or_default();
+
+                        if status.is_success() {
+                            tracing::info!("Successfully purged orphaned avatar from Sanity");
+                        } else {
+                            tracing::warn!(
+                                "Sanity rejected asset delete with status: {} - Details: {}",
+                                status,
+                                body_text
+                            );
+                        }
+                    }
+                    Err(e) => {
+                        tracing::error!(
+                            "Failed sending deletion mutation request to Sanity: {:?}",
+                            e
+                        );
+                    }
+                }
+            });
+        } else {
+            tracing::info!("Purge skipped: Old ID matches incoming Payload ID exactly.");
+        }
+    } else {
+        tracing::info!("Purge skipped: No old avatar ID was found in the database profile row.");
+    }
+
+    Ok(Json(payload))
 }

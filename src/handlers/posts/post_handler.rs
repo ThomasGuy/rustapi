@@ -27,11 +27,8 @@ use crate::{
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct SanityAssetRef {
-    // 🌟 Bridges incoming JSON "_ref" (or database "reference") to this Rust property
     #[serde(alias = "_ref", rename(serialize = "_ref", deserialize = "reference"))]
     pub reference: String,
-
-    // 🌟 Bridges incoming JSON "_type" (or database "asset_type") to this Rust property
     #[serde(
         alias = "_type",
         rename(serialize = "_type", deserialize = "asset_type")
@@ -164,8 +161,6 @@ pub async fn delete_post(
         tracing::error!(user_id=%user.id, "Post nor found or unauthorized");
         // If no rows were deleted, either the post doesn't exist
         // or the current user doesn't own it.
-        // let db_err = DbError::NotFound("Post not found or unauthorized".into());
-        // return Err(AppError::Db(db_err));
         return Err(AppError::Forbidden(
             "Unauthorized -- not your post --".into(),
         ));

@@ -58,6 +58,7 @@ pub fn generate_cors_layer(environment: Environment) -> CorsLayer {
                     Method::GET,
                     Method::POST,
                     Method::PUT,
+                    Method::PATCH,
                     Method::DELETE,
                     Method::OPTIONS,
                 ])
@@ -86,6 +87,7 @@ pub fn generate_cors_layer(environment: Environment) -> CorsLayer {
                     Method::GET,
                     Method::POST,
                     Method::PUT,
+                    Method::PATCH,
                     Method::DELETE,
                     Method::OPTIONS,
                 ])

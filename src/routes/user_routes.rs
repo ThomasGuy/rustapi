@@ -1,10 +1,10 @@
 use axum::{
-    routing::{get, post},
+    routing::{get, patch, post},
     Router,
 };
 
 use crate::{
-    handlers::users::{all_users, login, logout, refresh_handler, register},
+    handlers::users::{all_users, login, logout, refresh_handler, register, update_profile},
     utils::AppState,
 };
 
@@ -15,4 +15,5 @@ pub fn user_routes() -> Router<AppState> {
         .route("/login", post(login))
         .route("/logout", post(logout))
         .route("/refresh", post(refresh_handler))
+        .route("/update", patch(update_profile))
 }
