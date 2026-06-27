@@ -12,10 +12,12 @@ use diesel::serialize::{self, IsNull, Output, ToSql};
 use diesel::sql_types::Jsonb;
 use diesel::{backend::Backend, RunQueryDsl};
 use serde::{Deserialize, Serialize};
+use tracing::{error, info, warn};
 use uuid::Uuid;
 
-use crate::auth::CurrentUser;
+use super::UserSummary;
 use crate::schema::{likes, posts};
+use crate::{auth::CurrentUser, utils::delete_asset_from_sanity};
 use crate::{
     db::{get_connection, DbConnection},
     models::{
@@ -94,10 +96,10 @@ pub struct ImageRequest {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreatePostResponse {
-    pub id: uuid::Uuid,
-    pub user_id: uuid::Uuid,
+    pub id: Uuid,
+    pub user_id: Uuid,
     pub caption: Option<String>,
-    pub username: String,
+    pub user: UserSummary,
     pub sanity_image: SanityImage, // Becomes "sanityImage" object array in TypeScript
     pub view_count: i32,
     pub created_at: chrono::NaiveDateTime,
@@ -131,10 +133,13 @@ pub async fn create_posts(
         id: post.id,
         user_id: post.user_id,
         caption: post.caption,
-        username: post.username,
+        user: UserSummary {
+            username: post.username,
+            avatar_url: user.avatar_url,
+        },
         sanity_image: post.sanity_image,
-        view_count: post.view_count,
         created_at: post.created_at,
+        view_count: post.view_count,
     };
 
     Ok((StatusCode::CREATED, Json(response_payload)))
@@ -148,24 +153,55 @@ pub async fn delete_post(
 ) -> AppResult<StatusCode> {
     let mut conn: DbConnection = get_connection(&state.pool).await?;
 
-    // Only delete if BOTH the post_id and user_id match
-    let count = diesel::delete(
-        posts::table
-            .filter(posts::id.eq(post_id))
-            .filter(posts::user_id.eq(user.id)), // Ownership check
-    )
-    .execute(&mut conn)
-    .map_err(DbError::from)?;
+    let post_lookup = posts::table
+        .filter(posts::id.eq(post_id))
+        .filter(posts::user_id.eq(user.id)) // ◄ Ownership validation happens first!
+        .select(Post::as_select())
+        .first::<Post>(&mut conn)
+        .optional() // Wrap in an optional to handle missing records cleanly
+        .map_err(DbError::from)?;
 
-    if count == 0 {
-        tracing::error!(user_id=%user.id, "Post nor found or unauthorized");
-        // If no rows were deleted, either the post doesn't exist
-        // or the current user doesn't own it.
-        return Err(AppError::Forbidden(
-            "Unauthorized -- not your post --".into(),
-        ));
+    let post = match post_lookup {
+        Some(data) => data,
+        None => {
+            error!(user_id = %user.id, post_id = %post_id, "Post not found or unauthorized");
+            return Err(AppError::Forbidden(
+                "Unauthorized -- not your post or post does not exist --".into(),
+            ));
+        }
+    };
+
+    let target_asset_id = post.sanity_image.asset.reference;
+
+    // 🚀 TYPE-SAFE & CLEAN: Uses a single sql fragment inside your standard query builder
+    let duplicate_refs: i64 = posts::table
+        .filter(
+            diesel::dsl::sql::<diesel::sql_types::Bool>("(sanity_image->'asset'->>'_ref') = ")
+                .bind::<diesel::sql_types::Text, _>(&target_asset_id),
+        )
+        .filter(posts::id.ne(post_id)) // ◄ Diesel native handler handles the second parameter perfectly!
+        .count()
+        .get_result::<i64>(&mut conn)
+        .unwrap_or(0);
+
+    // 3. Conditional Asset Eviction Execution Path
+    if duplicate_refs == 0 {
+        info!(id = %target_asset_id, "No duplicate rows found. Initialising remote CDN garbage collection...");
+        delete_asset_from_sanity(&state, &target_asset_id).await?;
+    } else {
+        warn!(
+            id = %target_asset_id,
+            count = duplicate_refs,
+            "Skipping Sanity CDN deletion. Asset is still shared by other post records."
+        );
     }
-    tracing::info!(user_id=%user.id, "Post deleted");
+
+    diesel::delete(posts::table.filter(posts::id.eq(post_id))) // Ownership check)
+        .execute(&mut conn)
+        .map_err(DbError::from)?;
+
+    info!(user_id=%user.id, "Post deleted");
+
     Ok(StatusCode::NO_CONTENT)
 }
 

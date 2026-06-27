@@ -19,6 +19,9 @@ pub enum AppError {
     #[error("Unauthorized: {0}")]
     Auth(String), // For login/Auth
 
+    #[error("Unauthorized: {0}")]
+    Sanity(String), // For login/Auth
+
     #[error("Forbidden")]
     Forbidden(String), // User is logged in but doesn't own this resource
 
@@ -104,6 +107,11 @@ impl IntoResponse for AppError {
                             StatusCode::BAD_GATEWAY,
                             "Failed to communicate with the media storage provider".into(),
                         )
+                    }
+
+                    AppError::Sanity(msg) => {
+                        info!("Sanity failed: {:?}", msg);
+                        (StatusCode::UNAUTHORIZED, format!("Token invalid. {msg}"))
                     }
 
                     AppError::Internal(msg) => {

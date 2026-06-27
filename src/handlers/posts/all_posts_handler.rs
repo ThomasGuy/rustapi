@@ -10,7 +10,7 @@ use diesel::RunQueryDsl;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::schema::{comments, likes, posts};
+use crate::schema::{comments, likes, posts, users};
 use crate::utils::AppError;
 use crate::{auth::CurrentUser, handlers::posts::post_handler::SanityImage};
 use crate::{
@@ -28,9 +28,11 @@ pub struct PaginationQuery {
 const DEFAULT_ALL_LIMIT: i64 = 20;
 const DEFAULT_USER_LIMIT: i64 = 60;
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UserSummary {
     pub username: String,
+    pub avatar_url: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -40,7 +42,7 @@ pub struct PostResponse {
     pub sanity_image: SanityImage,
     pub caption: Option<String>,
     pub user_id: Uuid,
-    pub user: UserSummary, // Matches TS: user: { username }
+    pub user: UserSummary, // Matches TS: user: UserSummary;
     pub created_at: NaiveDateTime,
     pub comments: Vec<IComment>, // Matches TS: IComment[]
     pub likes_count: i64,
@@ -67,6 +69,19 @@ async fn get_posts_reponse(
 
     let mut conn: DbConnection = get_connection(&state.pool).await?;
     let post_ids: Vec<Uuid> = posts_data.iter().map(|p| p.id).collect();
+
+    // 🚀 NEW BATCH STEP: Extract all distinct author user IDs from the posts list
+    let author_ids: Vec<Uuid> = posts_data.iter().map(|p| p.user_id).collect();
+
+    // Fetch only the username and avatar columns from the users table for these specific authors
+    let authors_avatars = users::table
+        .filter(users::id.eq_any(&author_ids))
+        .select((users::id, users::avatar_url))
+        .load::<(Uuid, Option<String>)>(&mut conn)
+        .map_err(DbError::from)?;
+
+    // Group avatars into a lookup map: HashMap<UserId, AvatarUrlString>
+    let avatars_map: HashMap<Uuid, Option<String>> = authors_avatars.into_iter().collect();
 
     // 1. Fetch ALL likes for these posts in one go
     let all_likes = likes::table
@@ -108,6 +123,10 @@ async fn get_posts_reponse(
                 .map(|v| v.contains(&current_user_id))
                 .unwrap_or(false);
 
+            // 🚀 LOOK UP AVATAR: Look up the avatar string using the post author's user_id
+            // If the map lookup returns None, it gracefully defaults to None (null in JSON)
+            let author_avatar = avatars_map.get(&p.user_id).cloned().flatten();
+
             PostResponse {
                 id: p.id,
                 user_id: p.user_id,
@@ -115,7 +134,8 @@ async fn get_posts_reponse(
                 sanity_image: p.sanity_image,
                 user: UserSummary {
                     username: p.username,
-                }, // Map 'p.username' to nested object
+                    avatar_url: author_avatar,
+                },
                 created_at: p.created_at,
                 comments: comments_map.remove(&p.id).unwrap_or_default(),
                 likes_count,

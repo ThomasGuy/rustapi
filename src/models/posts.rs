@@ -15,10 +15,10 @@ pub struct Post {
     pub user_id: Uuid,
     pub caption: Option<String>,
     pub username: String,
-    pub sanity_image: SanityImage,
     pub view_count: i32,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
+    pub sanity_image: SanityImage,
 }
 
 #[derive(Debug, Insertable, Deserialize)]
