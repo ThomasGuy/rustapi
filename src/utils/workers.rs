@@ -8,57 +8,8 @@ use uuid::Uuid;
 use crate::db::{DbConnection, DbPool};
 use crate::utils::DbError;
 
-// pub async fn _clean_image_folder(pool: DbPool) {
-//     let mut interval = time::interval(Duration::from_secs(3600 * 24)); // Run every day
-
-//     loop {
-//         interval.tick().await;
-//         // Everything inside this span will be tagged with 'image_cleanup'
-//         // and a unique ID for this specific run.
-//         let span = info_span!("image_cleanup", cleanup_id = %Uuid::new_v4());
-//         let _enter = span.enter();
-//         let pool_cloned: DbPool = pool.clone();
-
-//         // task::spawn_blocking returns Result<Result<T, DbError>, JoinError>>
-//         let result = tokio::task::spawn_blocking(move || {
-//             let mut conn: DbConnection = pool_cloned.get().map_err(DbError::PoolError)?;
-//             let image_urls = posts::table
-//                 .select(posts::sanity_image)
-//                 .load::<SanityImage>(&mut conn)?;
-
-//             // Convert to HashSet for instant lookups
-//             let image_set: HashSet<String> = image_urls.into_iter().collect();
-
-//             for entry in fs::read_dir("./images")? {
-//                 let entry = entry?;
-//                 let path = entry.path();
-//                 if path.is_file() {
-//                     // Assume filename maps to URL in DB
-//                     let file_name = path.file_name().unwrap().to_string_lossy().into_owned();
-//                     if !image_set.contains(&file_name) {
-//                         fs::remove_file(path)?; // Delete file if not in set
-//                     }
-//                 }
-//             }
-//             Ok::<(), DbError>(()) // Explicitly tell the closure to return your enum
-//         })
-//         .await;
-
-//         // Handle the Result of the JoinHandle AND the internal Result
-//         match result {
-//             Ok(Ok(_)) => info!("Daily image cleanup successful"),
-//             Ok(Err(e)) => {
-//                 error!("Cleanup logic failed: {}. Will retry in 24h.", e)
-//             }
-//             Err(e) => {
-//                 error!("Worker thread panicked: {}. Will retry in 24h.", e)
-//             }
-//         }
-//     } // Span drops here automatically
-// }
-
 pub async fn clean_expired_tokens(pool: DbPool) {
-    let mut interval = time::interval(Duration::from_secs(3600)); // Run every hour
+    let mut interval = time::interval(Duration::from_secs(3600 * 24)); // Run every day
 
     loop {
         interval.tick().await;
@@ -83,10 +34,10 @@ pub async fn clean_expired_tokens(pool: DbPool) {
         match result {
             Ok(Ok(count)) => info!("Cleaned {:?} tokens", count),
             Ok(Err(e)) => {
-                error!("DB error: {}. Retrying in 1h.", e)
+                error!("DB error: {}. Retrying in 1 day.", e)
             }
             Err(e) => {
-                error!("Thread panic: {}. Retrying in 1h.", e)
+                error!("Thread panic: {}. Retrying in 1 day.", e)
             }
         }
     } // Span drops here automatically

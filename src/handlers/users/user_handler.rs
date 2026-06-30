@@ -1,6 +1,7 @@
 use axum::{extract::State, http::StatusCode, Json};
 use diesel::prelude::*;
 use serde::Deserialize;
+use serde_json::{json, Value};
 
 use crate::auth::CurrentUser;
 use crate::db::{get_connection, DbConnection};
@@ -57,4 +58,15 @@ pub async fn all_users(
     .map_err(DbError::from)??;
 
     Ok(Json(users_list))
+}
+
+// GET /user/check
+pub async fn user_check(CurrentUser(_user): CurrentUser) -> (StatusCode, Json<Value>) {
+    (
+        StatusCode::OK,
+        Json(json!({
+            "status": "ok",
+            "version": env!("CARGO_PKG_VERSION"),
+        })),
+    )
 }
